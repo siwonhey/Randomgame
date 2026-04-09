@@ -501,9 +501,9 @@ scene.add(stadium);
 function createTop3D(color) {
   const group = new THREE.Group();
   const c = new THREE.Color(color);
-  const S = 1.6; // scale factor for bigger tops
+  const S = 1.6; // 팽이 크기 배율
 
-  // Main disc body
+  // 1. 메인 바디 (기존 유지)
   const discGeo = new THREE.CylinderGeometry(0.35 * S, 0.30 * S, 0.12 * S, 32);
   const discMat = new THREE.MeshPhysicalMaterial({
     color: c,
@@ -520,48 +520,39 @@ function createTop3D(color) {
   disc.position.y = 0.12 * S;
   group.add(disc);
 
-  // Asymmetric decal on top surface (canvas texture for visible rotation)
+  // 2. 팽이 윗면 디자인
   const decalCanvas = document.createElement('canvas');
   decalCanvas.width = 256;
   decalCanvas.height = 256;
   const dctx = decalCanvas.getContext('2d');
-  // Transparent background
   dctx.clearRect(0, 0, 256, 256);
   const hexStr = '#' + c.getHexString();
-  // Arrow / asymmetric stripe pattern
+
   dctx.save();
   dctx.translate(128, 128);
-  // Bold asymmetric stripe
-  dctx.fillStyle = hexStr;
-  dctx.globalAlpha = 0.9;
-  dctx.beginPath();
-  dctx.moveTo(-12, -110);
-  dctx.lineTo(12, -110);
-  dctx.lineTo(12, 10);
-  dctx.lineTo(-12, 10);
-  dctx.fill();
-  // Arrow head at top
-  dctx.beginPath();
-  dctx.moveTo(0, -125);
-  dctx.lineTo(-28, -90);
-  dctx.lineTo(28, -90);
-  dctx.closePath();
-  dctx.fill();
-  // Two dots for asymmetry
-  dctx.globalAlpha = 0.7;
-  dctx.beginPath();
-  dctx.arc(55, 40, 14, 0, Math.PI * 2);
-  dctx.fill();
-  dctx.beginPath();
-  dctx.arc(-55, 40, 8, 0, Math.PI * 2);
-  dctx.fill();
-  // White accent ring
-  dctx.globalAlpha = 0.35;
+
+  // --- 120도 간격의 3선 그리기 (더 길게 수정) ---
+  for (let i = 0; i < 3; i++) {
+    dctx.save();
+    dctx.rotate(i * (Math.PI * 2 / 3)); 
+    
+    dctx.fillStyle = hexStr;
+    dctx.globalAlpha = 0.9;
+    dctx.beginPath();
+    // y 위치를 -125로 늘리고 세로 길이를 120으로 확장하여 반지름 끝까지 닿게 함
+    dctx.roundRect(-10, -125, 20, 120, 5); 
+    dctx.fill();
+    dctx.restore();
+  }
+
+  // --- 화이트 링 (투명도 30%로 수정) ---
+  dctx.globalAlpha = 0.3; // 기존 0.6에서 0.3(30%)으로 변경
   dctx.strokeStyle = '#ffffff';
-  dctx.lineWidth = 3;
+  dctx.lineWidth = 8; 
   dctx.beginPath();
-  dctx.arc(0, 0, 80, 0, Math.PI * 2);
+  dctx.arc(0, 0, 85, 0, Math.PI * 2);
   dctx.stroke();
+  
   dctx.restore();
 
   const decalTex = new THREE.CanvasTexture(decalCanvas);
@@ -577,7 +568,7 @@ function createTop3D(color) {
   decalMesh.position.y = 0.12 * S + 0.065 * S + 0.001;
   group.add(decalMesh);
 
-  // Blade spokes (3 aggressive blades)
+  // 3. 공격 날개 (기존 유지)
   for (let i = 0; i < 3; i++) {
     const angle = (i / 3) * Math.PI * 2;
     const bladeGeo = new THREE.BoxGeometry(0.38 * S, 0.04 * S, 0.065 * S);
@@ -591,33 +582,22 @@ function createTop3D(color) {
       emissiveIntensity: 0.25,
     });
     const blade = new THREE.Mesh(bladeGeo, bladeMat);
-    blade.position.set(
-      Math.cos(angle) * 0.24 * S,
-      0.12 * S,
-      Math.sin(angle) * 0.24 * S
-    );
+    blade.position.set(Math.cos(angle) * 0.24 * S, 0.12 * S, Math.sin(angle) * 0.24 * S);
     blade.rotation.y = -angle + Math.PI / 2;
     blade.rotation.z = 0.15;
     group.add(blade);
   }
 
-  // Core sphere (glowing center)
+  // 4. 중앙 코어 (기존 유지)
   const coreGeo = new THREE.SphereGeometry(0.08 * S, 16, 16);
-  const coreMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    emissive: c,
-    emissiveIntensity: 0.7,
-    transparent: true,
-    opacity: 0.9,
-    roughness: 0,
-    metalness: 0,
-  });
+  const coreMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.7, transparent: true, opacity: 0.9 });
   const core = new THREE.Mesh(coreGeo, coreMat);
   core.position.y = 0.14 * S;
   group.add(core);
 
-  // Handle (top axis)
-  const handleGeo = new THREE.CylinderGeometry(0.03 * S, 0.05 * S, 0.15 * S, 8);
+  // 5. 핸들 (길이 연장 유지)
+  const handleHeight = 0.35 * S; 
+  const handleGeo = new THREE.CylinderGeometry(0.02 * S, 0.04 * S, handleHeight, 8);
   const handleMat = new THREE.MeshPhysicalMaterial({
     color: c,
     transparent: true,
@@ -625,24 +605,18 @@ function createTop3D(color) {
     roughness: 0.1,
   });
   const handle = new THREE.Mesh(handleGeo, handleMat);
-  handle.position.y = 0.26 * S;
+  handle.position.y = 0.12 * S + (handleHeight / 2) + 0.1 * S; 
   group.add(handle);
 
-  // Tip (bottom point)
+  // 6. 하단 팁 (기존 유지)
   const tipGeo = new THREE.ConeGeometry(0.04 * S, 0.1 * S, 8);
-  const tipMat = new THREE.MeshPhysicalMaterial({
-    color: c,
-    transparent: true,
-    opacity: 0.6,
-    roughness: 0.05,
-    metalness: 0.5,
-  });
+  const tipMat = new THREE.MeshPhysicalMaterial({ color: c, transparent: true, opacity: 0.6, metalness: 0.5 });
   const tip = new THREE.Mesh(tipGeo, tipMat);
   tip.rotation.x = Math.PI;
   tip.position.y = 0.01;
   group.add(tip);
 
-  // Point light for glow
+  // 조명 효과
   const light = new THREE.PointLight(color, 0.6, 2.5 * S);
   light.position.y = 0.1 * S;
   group.add(light);
@@ -757,10 +731,10 @@ function addTopPhysics(name, color) {
 
   const radius = cryptoRange(14, 17);
   const body = Bodies.circle(x, y, radius, {
-    mass: cryptoRange(0.6, 1.1),
-    restitution: cryptoRange(0.9, 1.4),
+    mass: cryptoRange(0.6, 1.0),//무게
+    restitution: cryptoRange(0.9, 1.4),//탄성
     friction: 0.001,
-    frictionAir: 0.0015,
+    frictionAir: 0.0015,//공기 저항
     frictionStatic: 0,
   });
   Composite.add(world, body);
@@ -841,8 +815,8 @@ Events.on(engine, 'collisionStart', (event) => {
       // Time pressure: forces increase as battle progresses
       // After 10s, collision knockback ramps up dramatically
       const baseFactor = 1 + (state.battleElapsed / BATTLE_TIME_LIMIT) * 1.5;
-      const aggressionBoost = state.battleElapsed > 10
-        ? 1 + Math.min((state.battleElapsed - 10) / 10, 1) * 2.5
+      const aggressionBoost = state.battleElapsed > 5
+        ? 1 + Math.min((state.battleElapsed - 5) / 5, 1) * 2.5
         : 1;
       const timeFactor = baseFactor * aggressionBoost;
       const force = intensity * 0.012 * timeFactor;
@@ -956,7 +930,7 @@ function launchTops() {
     const dx = -top.body.position.x;
     const dy = -top.body.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const speed = cryptoRange(2, 4);
+    const speed = cryptoRange(2, 3);
     Body.setVelocity(top.body, {
       x: (dx / dist) * speed,
       y: (dy / dist) * speed,
@@ -1159,8 +1133,8 @@ function physicsTick() {
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
     // Central pull increases over time
-    const baseGrav = 0.00008;
-    const gravBoost = timeRatio * 0.0008;
+    const baseGrav = 0.00008;//기본 중력
+    const gravBoost = timeRatio * 0.001;//시간이 흐를수록 중앙으로 강하게 당김
     const gravForce = (baseGrav + gravBoost) * (dist / STADIUM_RADIUS);
     Body.applyForce(top.body, top.body.position, {
       x: (dx / dist) * gravForce,
@@ -1168,7 +1142,7 @@ function physicsTick() {
     });
 
     // After 10s: tops actively seek nearest opponent
-    if (state.battleElapsed > 10) {
+    if (state.battleElapsed > 6) {
       let nearest = null;
       let nearestDist = Infinity;
       for (const other of active) {
@@ -1186,7 +1160,7 @@ function physicsTick() {
         const seekDy = nearest.body.position.y - top.body.position.y;
         const seekDist = Math.sqrt(seekDx * seekDx + seekDy * seekDy) || 1;
         // Seek force escalates from 10s to 30s
-        const seekPhase = Math.min((state.battleElapsed - 10) / 20, 1);
+        const seekPhase = Math.min((state.battleElapsed - 5) / 25, 1);
         const seekForce = 0.0003 + seekPhase * 0.0012;
         Body.applyForce(top.body, top.body.position, {
           x: (seekDx / seekDist) * seekForce,
