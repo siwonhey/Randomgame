@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metal Blade — Beyblade Survival Battle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Left Panel -->
+  <div id="panel">
+    <button id="mobile-toggle" class="mobile-toggle">&minus;</button>
+    <h1>Metal Blade</h1>
+    <input type="text" id="event-title" placeholder="Event Title" spellcheck="false">
+
+    <div class="section-label">Participants</div>
+    <div id="name-input-wrap">
+      <input type="text" id="name-input" placeholder="Enter name and press Enter" spellcheck="false">
+      <button id="add-btn">+</button>
+    </div>
+
+    <div class="upload-row">
+      <button id="csv-upload-btn" class="upload-btn">CSV Upload</button>
+      <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
+      <button id="share-btn" class="share-btn">Share URL</button>
+    </div>
+
+    <div id="participants"></div>
+    <div id="count-display">0 / 30</div>
+
+    <button id="battle-btn" disabled>Battle Start</button>
+
+    <div class="divider"></div>
+
+    <div id="rankings-section">
+      <div class="section-label">Eliminated</div>
+      <div id="rankings"></div>
+    </div>
+  </div>
+
+  <!-- Game Area -->
+  <div id="game-area">
+    <div id="status-bar"></div>
+    <div id="timer-display"></div>
+    <div id="countdown"></div>
+    <div id="result-overlay">
+      <div id="result-title">Final Rankings</div>
+      <div id="result-list"></div>
+      <div class="result-actions">
+        <button id="btn-copy">Copy Results</button>
+        <button id="btn-retry" class="primary">Play Again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="sound-toggle" title="Toggle Sound">&#x1f50a;</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
