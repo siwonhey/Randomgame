@@ -112,6 +112,138 @@ function playVictory() {
   });
 }
 
+// ── EDM Background Music (procedural) ──
+let edmPlaying = false;
+let edmNodes = [];
+let edmInterval = null;
+
+function startEDM() {
+  if (!state.soundEnabled || edmPlaying) return;
+  ensureAudio();
+  edmPlaying = true;
+  const t = audioCtx.currentTime;
+  const bpm = 140;
+  const beatLen = 60 / bpm;
+
+  // Master gain
+  const master = audioCtx.createGain();
+  master.gain.value = 0.12;
+  master.connect(audioCtx.destination);
+
+  // Kick drum pattern
+  function scheduleKick(time) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(30, time + 0.12);
+    g.gain.setValueAtTime(0.7, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    osc.connect(g).connect(master);
+    osc.start(time);
+    osc.stop(time + 0.15);
+    edmNodes.push(osc);
+  }
+
+  // Hi-hat (noise burst)
+  function scheduleHat(time, open) {
+    const bufSize = audioCtx.sampleRate * (open ? 0.08 : 0.03);
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.3));
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 8000;
+    const g = audioCtx.createGain();
+    g.gain.value = open ? 0.15 : 0.1;
+    src.connect(hp).connect(g).connect(master);
+    src.start(time);
+    edmNodes.push(src);
+  }
+
+  // Bass synth
+  function scheduleBass(time, freq, dur) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(800, time);
+    lp.frequency.exponentialRampToValueAtTime(200, time + dur);
+    g.gain.setValueAtTime(0.3, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    osc.connect(lp).connect(g).connect(master);
+    osc.start(time);
+    osc.stop(time + dur);
+    edmNodes.push(osc);
+  }
+
+  // Lead synth arpeggio
+  function scheduleLead(time, freq, dur) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 3000;
+    g.gain.setValueAtTime(0.08, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    osc.connect(lp).connect(g).connect(master);
+    osc.start(time);
+    osc.stop(time + dur);
+    edmNodes.push(osc);
+  }
+
+  // Bass notes (E minor progression)
+  const bassNotes = [82.4, 82.4, 110, 98]; // E2, E2, A2, G2
+  // Lead arpeggio notes
+  const leadNotes = [330, 392, 494, 392, 330, 494, 587, 494]; // E4 G4 B4 etc
+
+  let beat = 0;
+  function scheduleBar() {
+    if (!edmPlaying || !state.soundEnabled) { stopEDM(); return; }
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < 8; i++) {
+      const time = now + i * (beatLen / 2);
+      // Kick on every beat (1, 2, 3, 4)
+      if (i % 2 === 0) scheduleKick(time);
+      // Hi-hat on every 8th note, open on offbeats
+      scheduleHat(time, i % 2 === 1);
+      // Bass on beats 1 and 3
+      if (i === 0 || i === 4) {
+        const bassNote = bassNotes[(beat + Math.floor(i / 4)) % bassNotes.length];
+        scheduleBass(time, bassNote, beatLen * 1.5);
+      }
+      // Lead arpeggio
+      const leadNote = leadNotes[(beat * 8 + i) % leadNotes.length];
+      scheduleLead(time, leadNote, beatLen * 0.4);
+    }
+    beat++;
+    // Clean up old nodes
+    edmNodes = edmNodes.filter(n => { try { return n.context.currentTime < n.context.currentTime + 10; } catch { return false; } });
+  }
+
+  scheduleBar();
+  edmInterval = setInterval(scheduleBar, beatLen * 4 * 1000); // schedule every bar
+  edmNodes.push(master);
+}
+
+function stopEDM() {
+  edmPlaying = false;
+  if (edmInterval) { clearInterval(edmInterval); edmInterval = null; }
+  edmNodes.forEach(n => {
+    try {
+      if (n.stop) n.stop();
+      if (n.disconnect) n.disconnect();
+    } catch { /* already stopped */ }
+  });
+  edmNodes = [];
+}
+
 // Spin hum (continuous)
 let spinOsc = null;
 let spinGain = null;
@@ -238,36 +370,103 @@ function updateNebulaTexture(time) {
 
 function createStadium() {
   const group = new THREE.Group();
+  const R = STADIUM_3D_RADIUS;
+  const DEPTH = 0.7; // bowl depth
+  const SEGS = 64;
 
-  // Base disc
-  const baseGeo = new THREE.CircleGeometry(STADIUM_3D_RADIUS, 64);
-  const baseMat = new THREE.MeshStandardMaterial({
+  // Concave bowl geometry (custom shape via LatheGeometry)
+  const points = [];
+  for (let i = 0; i <= SEGS; i++) {
+    const t = i / SEGS; // 0 = center, 1 = rim
+    const r = t * R;
+    // Parabolic bowl: y = -DEPTH * (1 - t^2)
+    const y = -DEPTH * (1 - t * t);
+    points.push(new THREE.Vector2(r, y));
+  }
+  const bowlGeo = new THREE.LatheGeometry(points, 64);
+  const bowlMat = new THREE.MeshStandardMaterial({
     color: 0x0a0a18,
-    roughness: 0.8,
-    metalness: 0.2,
+    roughness: 0.6,
+    metalness: 0.3,
+    side: THREE.DoubleSide,
   });
-  const baseDisc = new THREE.Mesh(baseGeo, baseMat);
-  baseDisc.rotation.x = -Math.PI / 2;
-  baseDisc.position.y = -0.06;
-  group.add(baseDisc);
+  const bowl = new THREE.Mesh(bowlGeo, bowlMat);
+  group.add(bowl);
 
-  // Nebula glow floor
+  // Nebula glow floor mapped onto bowl surface
   const nebulaTexture = createNebulaTexture();
   const nebulaMat = new THREE.MeshBasicMaterial({
     map: nebulaTexture,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.85,
+    side: THREE.DoubleSide,
   });
-  const nebulaDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(STADIUM_3D_RADIUS, 64),
-    nebulaMat
-  );
-  nebulaDisc.rotation.x = -Math.PI / 2;
-  nebulaDisc.position.y = -0.04;
+  // Slightly offset nebula bowl to overlay
+  const nebulaPoints = [];
+  for (let i = 0; i <= SEGS; i++) {
+    const t = i / SEGS;
+    const r = t * R;
+    const y = -DEPTH * (1 - t * t) + 0.01;
+    nebulaPoints.push(new THREE.Vector2(r, y));
+  }
+  const nebulaGeo = new THREE.LatheGeometry(nebulaPoints, 64);
+  // Fix UV mapping to be radial
+  const nebulaPos = nebulaGeo.attributes.position;
+  const nebulaUv = nebulaGeo.attributes.uv;
+  for (let i = 0; i < nebulaPos.count; i++) {
+    const x = nebulaPos.getX(i);
+    const z = nebulaPos.getZ(i);
+    nebulaUv.setXY(i, (x / R + 1) * 0.5, (z / R + 1) * 0.5);
+  }
+  nebulaUv.needsUpdate = true;
+  const nebulaDisc = new THREE.Mesh(nebulaGeo, nebulaMat);
   group.add(nebulaDisc);
 
-  // Inner edge glow ring
-  const ringGeo = new THREE.TorusGeometry(STADIUM_3D_RADIUS, 0.035, 8, 64);
+  // Grid lines on bowl surface (concentric + radial, via LineSegments)
+  const gridMat = new THREE.LineBasicMaterial({
+    color: 0x00BFFF,
+    transparent: true,
+    opacity: 0.08,
+  });
+  const gridPoints = [];
+
+  // Concentric circles on bowl
+  for (let ring = 1; ring <= 5; ring++) {
+    const ringR = (ring / 5) * R * 0.95;
+    const ringT = ringR / R;
+    const ringY = -DEPTH * (1 - ringT * ringT) + 0.02;
+    for (let j = 0; j < 64; j++) {
+      const a1 = (j / 64) * Math.PI * 2;
+      const a2 = ((j + 1) / 64) * Math.PI * 2;
+      gridPoints.push(
+        new THREE.Vector3(Math.cos(a1) * ringR, ringY, Math.sin(a1) * ringR),
+        new THREE.Vector3(Math.cos(a2) * ringR, ringY, Math.sin(a2) * ringR),
+      );
+    }
+  }
+
+  // Radial lines on bowl
+  for (let j = 0; j < 12; j++) {
+    const a = (j / 12) * Math.PI * 2;
+    for (let s = 0; s < 20; s++) {
+      const t1 = s / 20;
+      const t2 = (s + 1) / 20;
+      const r1 = t1 * R * 0.95, r2 = t2 * R * 0.95;
+      const y1 = -DEPTH * (1 - (t1) * (t1)) + 0.02;
+      const y2 = -DEPTH * (1 - (t2) * (t2)) + 0.02;
+      gridPoints.push(
+        new THREE.Vector3(Math.cos(a) * r1, y1, Math.sin(a) * r1),
+        new THREE.Vector3(Math.cos(a) * r2, y2, Math.sin(a) * r2),
+      );
+    }
+  }
+
+  const gridGeo = new THREE.BufferGeometry().setFromPoints(gridPoints);
+  const gridLines = new THREE.LineSegments(gridGeo, gridMat);
+  group.add(gridLines);
+
+  // Rim glow ring
+  const ringGeo = new THREE.TorusGeometry(R, 0.05, 12, 64);
   const ringMat = new THREE.MeshBasicMaterial({
     color: 0x00BFFF,
     transparent: true,
@@ -275,11 +474,11 @@ function createStadium() {
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
   ring.rotation.x = -Math.PI / 2;
-  ring.position.y = -0.02;
+  ring.position.y = 0;
   group.add(ring);
 
   // Outer soft glow
-  const outerGeo = new THREE.TorusGeometry(STADIUM_3D_RADIUS + 0.06, 0.12, 8, 64);
+  const outerGeo = new THREE.TorusGeometry(R + 0.08, 0.15, 8, 64);
   const outerMat = new THREE.MeshBasicMaterial({
     color: 0x00BFFF,
     transparent: true,
@@ -287,7 +486,7 @@ function createStadium() {
   });
   const outer = new THREE.Mesh(outerGeo, outerMat);
   outer.rotation.x = -Math.PI / 2;
-  outer.position.y = -0.02;
+  outer.position.y = 0;
   group.add(outer);
 
   return group;
@@ -302,9 +501,10 @@ scene.add(stadium);
 function createTop3D(color) {
   const group = new THREE.Group();
   const c = new THREE.Color(color);
+  const S = 1.6; // scale factor for bigger tops
 
   // Main disc body
-  const discGeo = new THREE.CylinderGeometry(0.35, 0.30, 0.12, 32);
+  const discGeo = new THREE.CylinderGeometry(0.35 * S, 0.30 * S, 0.12 * S, 32);
   const discMat = new THREE.MeshPhysicalMaterial({
     color: c,
     transparent: true,
@@ -317,13 +517,70 @@ function createTop3D(color) {
     side: THREE.DoubleSide,
   });
   const disc = new THREE.Mesh(discGeo, discMat);
-  disc.position.y = 0.12;
+  disc.position.y = 0.12 * S;
   group.add(disc);
+
+  // Asymmetric decal on top surface (canvas texture for visible rotation)
+  const decalCanvas = document.createElement('canvas');
+  decalCanvas.width = 256;
+  decalCanvas.height = 256;
+  const dctx = decalCanvas.getContext('2d');
+  // Transparent background
+  dctx.clearRect(0, 0, 256, 256);
+  const hexStr = '#' + c.getHexString();
+  // Arrow / asymmetric stripe pattern
+  dctx.save();
+  dctx.translate(128, 128);
+  // Bold asymmetric stripe
+  dctx.fillStyle = hexStr;
+  dctx.globalAlpha = 0.9;
+  dctx.beginPath();
+  dctx.moveTo(-12, -110);
+  dctx.lineTo(12, -110);
+  dctx.lineTo(12, 10);
+  dctx.lineTo(-12, 10);
+  dctx.fill();
+  // Arrow head at top
+  dctx.beginPath();
+  dctx.moveTo(0, -125);
+  dctx.lineTo(-28, -90);
+  dctx.lineTo(28, -90);
+  dctx.closePath();
+  dctx.fill();
+  // Two dots for asymmetry
+  dctx.globalAlpha = 0.7;
+  dctx.beginPath();
+  dctx.arc(55, 40, 14, 0, Math.PI * 2);
+  dctx.fill();
+  dctx.beginPath();
+  dctx.arc(-55, 40, 8, 0, Math.PI * 2);
+  dctx.fill();
+  // White accent ring
+  dctx.globalAlpha = 0.35;
+  dctx.strokeStyle = '#ffffff';
+  dctx.lineWidth = 3;
+  dctx.beginPath();
+  dctx.arc(0, 0, 80, 0, Math.PI * 2);
+  dctx.stroke();
+  dctx.restore();
+
+  const decalTex = new THREE.CanvasTexture(decalCanvas);
+  const decalGeo = new THREE.CircleGeometry(0.34 * S, 32);
+  const decalMat = new THREE.MeshBasicMaterial({
+    map: decalTex,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const decalMesh = new THREE.Mesh(decalGeo, decalMat);
+  decalMesh.rotation.x = -Math.PI / 2;
+  decalMesh.position.y = 0.12 * S + 0.065 * S + 0.001;
+  group.add(decalMesh);
 
   // Blade spokes (3 aggressive blades)
   for (let i = 0; i < 3; i++) {
     const angle = (i / 3) * Math.PI * 2;
-    const bladeGeo = new THREE.BoxGeometry(0.38, 0.04, 0.065);
+    const bladeGeo = new THREE.BoxGeometry(0.38 * S, 0.04 * S, 0.065 * S);
     const bladeMat = new THREE.MeshPhysicalMaterial({
       color: c,
       transparent: true,
@@ -335,9 +592,9 @@ function createTop3D(color) {
     });
     const blade = new THREE.Mesh(bladeGeo, bladeMat);
     blade.position.set(
-      Math.cos(angle) * 0.24,
-      0.12,
-      Math.sin(angle) * 0.24
+      Math.cos(angle) * 0.24 * S,
+      0.12 * S,
+      Math.sin(angle) * 0.24 * S
     );
     blade.rotation.y = -angle + Math.PI / 2;
     blade.rotation.z = 0.15;
@@ -345,7 +602,7 @@ function createTop3D(color) {
   }
 
   // Core sphere (glowing center)
-  const coreGeo = new THREE.SphereGeometry(0.08, 16, 16);
+  const coreGeo = new THREE.SphereGeometry(0.08 * S, 16, 16);
   const coreMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     emissive: c,
@@ -356,11 +613,11 @@ function createTop3D(color) {
     metalness: 0,
   });
   const core = new THREE.Mesh(coreGeo, coreMat);
-  core.position.y = 0.14;
+  core.position.y = 0.14 * S;
   group.add(core);
 
   // Handle (top axis)
-  const handleGeo = new THREE.CylinderGeometry(0.03, 0.05, 0.15, 8);
+  const handleGeo = new THREE.CylinderGeometry(0.03 * S, 0.05 * S, 0.15 * S, 8);
   const handleMat = new THREE.MeshPhysicalMaterial({
     color: c,
     transparent: true,
@@ -368,11 +625,11 @@ function createTop3D(color) {
     roughness: 0.1,
   });
   const handle = new THREE.Mesh(handleGeo, handleMat);
-  handle.position.y = 0.26;
+  handle.position.y = 0.26 * S;
   group.add(handle);
 
   // Tip (bottom point)
-  const tipGeo = new THREE.ConeGeometry(0.04, 0.1, 8);
+  const tipGeo = new THREE.ConeGeometry(0.04 * S, 0.1 * S, 8);
   const tipMat = new THREE.MeshPhysicalMaterial({
     color: c,
     transparent: true,
@@ -386,8 +643,8 @@ function createTop3D(color) {
   group.add(tip);
 
   // Point light for glow
-  const light = new THREE.PointLight(color, 0.6, 2.5);
-  light.position.y = 0.1;
+  const light = new THREE.PointLight(color, 0.6, 2.5 * S);
+  light.position.y = 0.1 * S;
   group.add(light);
 
   return group;
@@ -417,7 +674,7 @@ function createLabel(name) {
   });
   const sprite = new THREE.Sprite(mat);
   sprite.scale.set(1.2, 0.3, 1);
-  sprite.position.y = 0.6;
+  sprite.position.y = 0.9;
   return sprite;
 }
 
@@ -582,7 +839,12 @@ Events.on(engine, 'collisionStart', (event) => {
       const dist = Math.sqrt(nx * nx + ny * ny) || 1;
 
       // Time pressure: forces increase as battle progresses
-      const timeFactor = 1 + (state.battleElapsed / BATTLE_TIME_LIMIT) * 1.5;
+      // After 10s, collision knockback ramps up dramatically
+      const baseFactor = 1 + (state.battleElapsed / BATTLE_TIME_LIMIT) * 1.5;
+      const aggressionBoost = state.battleElapsed > 10
+        ? 1 + Math.min((state.battleElapsed - 10) / 10, 1) * 2.5
+        : 1;
+      const timeFactor = baseFactor * aggressionBoost;
       const force = intensity * 0.012 * timeFactor;
 
       Body.applyForce(pair.bodyA, pair.bodyA.position, {
@@ -685,6 +947,8 @@ function launchTops() {
   state.battleStartTime = performance.now();
   startSpinHum();
 
+  startEDM();
+
   tops.forEach(top => {
     top.rpm = top.initialSpin;
     top.eliminated = false;
@@ -778,6 +1042,7 @@ function endBattle(winner) {
   state.phase = 'result';
   state.rankings.unshift(winner);
   stopSpinHum();
+  stopEDM();
 
   // Spotlight on winner
   spotLight.intensity = 2.5;
@@ -825,6 +1090,7 @@ function resetGame() {
   state.rankings = [];
   state.battleElapsed = 0;
   stopSpinHum();
+  stopEDM();
   spotLight.intensity = 0;
 
   // Remove all physics bodies and meshes
@@ -900,6 +1166,34 @@ function physicsTick() {
       x: (dx / dist) * gravForce,
       y: (dy / dist) * gravForce,
     });
+
+    // After 10s: tops actively seek nearest opponent
+    if (state.battleElapsed > 10) {
+      let nearest = null;
+      let nearestDist = Infinity;
+      for (const other of active) {
+        if (other === top) continue;
+        const odx = other.body.position.x - top.body.position.x;
+        const ody = other.body.position.y - top.body.position.y;
+        const od = Math.sqrt(odx * odx + ody * ody);
+        if (od < nearestDist) {
+          nearestDist = od;
+          nearest = other;
+        }
+      }
+      if (nearest) {
+        const seekDx = nearest.body.position.x - top.body.position.x;
+        const seekDy = nearest.body.position.y - top.body.position.y;
+        const seekDist = Math.sqrt(seekDx * seekDx + seekDy * seekDy) || 1;
+        // Seek force escalates from 10s to 30s
+        const seekPhase = Math.min((state.battleElapsed - 10) / 20, 1);
+        const seekForce = 0.0003 + seekPhase * 0.0012;
+        Body.applyForce(top.body, top.body.position, {
+          x: (seekDx / seekDist) * seekForce,
+          y: (seekDy / seekDist) * seekForce,
+        });
+      }
+    }
 
     // Random nudges to prevent stalemates (after 15s)
     if (state.battleElapsed > 15 && cryptoRandom() < 0.02) {
@@ -1175,21 +1469,44 @@ document.getElementById('csv-input').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// Share URL
-document.getElementById('share-btn').addEventListener('click', () => {
-  const title = document.getElementById('event-title').value;
-  const names = state.participants.map(p => encodeURIComponent(p.name)).join(',');
-  const params = new URLSearchParams();
-  if (title) params.set('title', title);
-  if (names) params.set('names', names);
-  const url = window.location.origin + window.location.pathname + '?' + params.toString();
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById('share-btn');
-    btn.textContent = 'URL Copied!';
-    setTimeout(() => {
-      btn.textContent = 'Share URL';
-    }, 1500);
+// Shuffle participants
+document.getElementById('shuffle-btn').addEventListener('click', () => {
+  if (state.phase !== 'idle' || state.participants.length < 2) return;
+
+  // Fisher-Yates shuffle
+  for (let i = state.participants.length - 1; i > 0; i--) {
+    const j = Math.floor(cryptoRandom() * (i + 1));
+    [state.participants[i], state.participants[j]] = [state.participants[j], state.participants[i]];
+  }
+
+  // Reassign colors randomly
+  const shuffledColors = [...NEON_COLORS];
+  for (let i = shuffledColors.length - 1; i > 0; i--) {
+    const j = Math.floor(cryptoRandom() * (i + 1));
+    [shuffledColors[i], shuffledColors[j]] = [shuffledColors[j], shuffledColors[i]];
+  }
+  state.participants.forEach((p, i) => {
+    p.color = shuffledColors[i % shuffledColors.length];
   });
+
+  // Rebuild tops with new colors
+  tops.forEach(t => {
+    try { Composite.remove(world, t.body); } catch (e) { /* */ }
+    scene.remove(t.mesh);
+    t.mesh.traverse(child => {
+      if (child.material) child.material.dispose();
+      if (child.geometry) child.geometry.dispose();
+    });
+  });
+  tops.length = 0;
+  state.participants.forEach(p => addTopPhysics(p.name, p.color));
+
+  renderParticipants();
+  saveToLocalStorage();
+
+  const btn = document.getElementById('shuffle-btn');
+  btn.textContent = 'Shuffled!';
+  setTimeout(() => { btn.textContent = 'Shuffle'; }, 1000);
 });
 
 // Sound toggle
