@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metal Blade — Beyblade Survival Battle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- ─── Top Navigation Strip ─── -->
+  <header id="top-nav">
+    <div class="nav-section nav-logo">
+      <img id="logo" src="logo.png" alt="Metal Blade">
+    </div>
+    <div class="nav-section nav-tagline">
+      <p>DRIVEN BY PHYSICS, THIS INTERACTIVE DESIGN SYSTEM REDEFINES THE EXPERIENCE OF RANDOM SELECTION THROUGH VISUAL COLLISION.</p>
+    </div>
+    <div class="nav-section nav-title">
+      <input type="text" id="event-title" placeholder="TITLE" spellcheck="false">
+    </div>
+    <div class="nav-section nav-actions">
+      <button id="battle-btn" class="nav-btn primary" disabled>Battle Start</button>
+    </div>
+  </header>
+
+  <!-- ─── Game Area (full-screen) ─── -->
+  <div id="game-area">
+    <div id="status-bar"></div>
+    <div id="timer-display"></div>
+    <div id="countdown"></div>
+  </div>
+
+  <!-- ─── Bottom-Right Info Panel (unified list + controls) ─── -->
+  <aside id="bottom-info">
+    <div id="participant-controls">
+      <div id="name-input-wrap">
+        <input type="text" id="name-input" placeholder="Add name" spellcheck="false">
+        <button id="add-btn" title="Add">+</button>
+      </div>
+      <button id="shuffle-btn" class="nav-btn">Shuffle</button>
+      <button id="csv-upload-btn" class="nav-btn">CSV</button>
+      <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
+    </div>
+    <div id="participants-wrap">
+      <div id="participants"></div>
+    </div>
+    <div class="col-label">
+      <span>Participants</span>
+      <span id="count-display">0 / 30</span>
+    </div>
+  </aside>
+
+  <!-- ─── Result Overlay ─── -->
+  <div id="result-overlay">
+    <div id="result-title">Winner</div>
+    <div id="result-3d"></div>
+    <div id="result-winner-name"></div>
+    <div id="result-list"></div>
+    <div class="result-actions">
+      <button id="btn-copy">Copy Results</button>
+      <button id="btn-retry" class="primary">Play Again</button>
+    </div>
+  </div>
+
+  <!-- ─── Sound Toggle (fixed bottom-left) ─── -->
+  <button id="sound-toggle" title="Toggle Sound">&#x1f50a;</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
