@@ -15,6 +15,7 @@ function createNebulaTexture() {
 }
 
 export function updateNebulaTexture(time) {
+  time = 0;
   if (!nebulaCtx) return;
   const ctx = nebulaCtx;
   const w = 512, h = 512;
