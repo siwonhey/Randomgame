@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { camera, flashLight } from './scene.js';
 import { INTRO_DURATION } from './config.js';
 
-const TOP_POS       = new THREE.Vector3(0, 15, 0.01);  // straight-down, tiny offset to avoid degenerate lookAt
+const TOP_POS       = new THREE.Vector3(0, 25, 0.01);  // straight-down, tiny offset to avoid degenerate lookAt
 const TOP_TARGET    = new THREE.Vector3(0, 0, 0);      // stadium centered in frame
 const PERSP_POS     = new THREE.Vector3(0, 9, 10);
 const PERSP_TARGET  = new THREE.Vector3(0, 0, 0);
