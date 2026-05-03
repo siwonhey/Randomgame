@@ -496,7 +496,7 @@ html, body {
   letter-spacing: 8px;
   text-transform: uppercase;
   color: var(--c-muted);
-  margin-bottom: -16px;
+  margin-bottom: 16px;
   position: relative;
   z-index: 1;
 }
@@ -507,6 +507,7 @@ html, body {
   margin: 0 auto;
   position: relative;
 }
+
 #result-3d canvas {
   display: block;
   width: 100% !important;
