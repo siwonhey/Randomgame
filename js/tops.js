@@ -77,13 +77,16 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const S = scale;
 
   // ── Disc base (thick cylinder, slight taper) ──
+  // Material was MeshPhysicalMaterial w/ transmission: 0.15 — that triggers
+  // a per-frame second-pass scene render. Downgraded to MeshStandardMaterial
+  // and bumped emissiveIntensity to keep the neon self-glow.
   const disc = new THREE.Mesh(
     new THREE.CylinderGeometry(DISC_R_BASE * S, DISC_BOT_R_BASE * S, DISC_H_BASE * S, 32),
-    new THREE.MeshPhysicalMaterial({
-      color: c, transparent: true, opacity: 0.72,
-      roughness: 0.1, metalness: 0.1,
-      emissive: c, emissiveIntensity: 0.2,
-      transmission: 0.15, side: THREE.DoubleSide,
+    new THREE.MeshStandardMaterial({
+      color: c, transparent: true, opacity: 0.82,
+      roughness: 0.15, metalness: 0.2,
+      emissive: c, emissiveIntensity: 0.35,
+      side: THREE.DoubleSide,
     })
   );
   const discCenterY = DISC_H_BASE * S;          // disc center height
@@ -127,10 +130,10 @@ export function createTop3D(color, scale = BASE_SCALE) {
 
   // ── Curved claws around the disc's outer edge (all lean same direction) ──
   const clawGeo = buildClawGeometry(S);
-  const clawMat = new THREE.MeshPhysicalMaterial({
+  const clawMat = new THREE.MeshStandardMaterial({
     color: c, transparent: true, opacity: 0.88,
-    roughness: 0.05, metalness: 0.65,
-    emissive: c, emissiveIntensity: 0.32,
+    roughness: 0.08, metalness: 0.7,
+    emissive: c, emissiveIntensity: 0.45,
     side: THREE.DoubleSide,
   });
   for (let i = 0; i < CLAW_COUNT; i++) {
@@ -148,7 +151,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   // ── Core glow ──
   const core = new THREE.Mesh(
     new THREE.SphereGeometry(0.08 * S, 16, 16),
-    new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.7, transparent: true, opacity: 0.9 })
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 })
   );
   core.position.y = discCenterY + 0.02 * S;
   group.add(core);
@@ -157,7 +160,10 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const handleHeight = 0.35 * S;
   const handle = new THREE.Mesh(
     new THREE.CylinderGeometry(0.02 * S, 0.04 * S, handleHeight, 8),
-    new THREE.MeshPhysicalMaterial({ color: c, transparent: true, opacity: 0.9, roughness: 0.1 })
+    new THREE.MeshStandardMaterial({
+      color: c, transparent: true, opacity: 0.9, roughness: 0.1,
+      emissive: c, emissiveIntensity: 0.15,
+    })
   );
   handle.position.y = discCenterY + handleHeight / 2 + 0.1 * S;
   group.add(handle);
@@ -166,19 +172,18 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const tipH = 0.32 * S;
   const tip = new THREE.Mesh(
     new THREE.ConeGeometry(0.05 * S, tipH, 16),
-    new THREE.MeshPhysicalMaterial({
+    new THREE.MeshStandardMaterial({
       color: c, transparent: true, opacity: 0.8,
       metalness: 0.85, roughness: 0.15,
-      emissive: c, emissiveIntensity: 0.15,
+      emissive: c, emissiveIntensity: 0.25,
     })
   );
   tip.rotation.x = Math.PI;                                  // apex points down
   tip.position.y = (discCenterY - (DISC_H_BASE * S) / 2) - tipH / 2 + 0.02 * S;
   group.add(tip);
 
-  const light = new THREE.PointLight(color, 0.6, 2.5 * S);
-  light.position.y = 0.1 * S;
-  group.add(light);
+  // Per-top PointLight removed (was 30 lights at 30 tops — major shader cost).
+  // Self-glow is preserved entirely through bumped emissive channels above.
 
   return group;
 }

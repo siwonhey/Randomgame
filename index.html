@@ -5,45 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Metal Blade — Beyblade Survival Battle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
-  <!-- ─── Top Navigation Strip ─── -->
-  <header id="top-nav">
-    <div class="nav-section nav-logo">
-      <img id="logo" src="logo.png" alt="Metal Blade">
-    </div>
-    <div class="nav-section nav-tagline">
-      <p>DRIVEN BY PHYSICS, THIS INTERACTIVE DESIGN SYSTEM REDEFINES THE EXPERIENCE OF RANDOM SELECTION THROUGH VISUAL COLLISION.</p>
-    </div>
-    <div class="nav-section nav-title">
-      <input type="text" id="event-title" placeholder="TITLE" spellcheck="false">
-    </div>
-    <div class="nav-section nav-actions">
-      <button id="battle-btn" class="nav-btn primary" disabled>Battle Start</button>
-    </div>
-  </header>
-
-  <!-- ─── Game Area (full-screen) ─── -->
+  <!-- ─── Game Area (full-screen background canvas) ─── -->
   <div id="game-area">
     <div id="status-bar"></div>
     <div id="timer-display"></div>
     <div id="countdown"></div>
   </div>
 
-  <!-- ─── Bottom-Right Info Panel (unified list + controls) ─── -->
-  <aside id="bottom-info">
-    <div id="participant-controls">
-      <div id="name-input-wrap">
-        <input type="text" id="name-input" placeholder="Add name" spellcheck="false">
-        <button id="add-btn" title="Add">+</button>
+  <!-- ─── Popup mode chrome (overlay + close button — used during battle) ─── -->
+  <div id="popup-backdrop"></div>
+  <button id="popup-toggle" title="Edit Participants" aria-label="Edit Participants">&#x2699;</button>
+
+  <!-- ─── Setup Panel (centered card; visible during idle/result;
+       reused as popup-modal during battle when #popup-toggle is clicked) ─── -->
+  <!-- DOM IDs are preserved from the previous top-nav + bottom-info split
+       so that ui.js / game.js event bindings keep working unchanged. -->
+  <section id="setup-panel">
+    <!-- The setup-card wraps all setup content with a translucent fill so the
+         input region reads as a distinct surface separate from the live canvas
+         behind it. In popup mode the card becomes a true modal: solid fill,
+         fixed width, popup-close anchored to its corner. -->
+    <div class="setup-card">
+      <button id="popup-close" title="Close" aria-label="Close">&times;</button>
+      <div class="setup-brand">
+        <img id="logo" src="logo.png" alt="Metal Blade">
+        <p class="setup-tagline">DRIVEN BY PHYSICS — THE EXPERIENCE OF RANDOM SELECTION THROUGH VISUAL COLLISION</p>
       </div>
-      <button id="shuffle-btn" class="nav-btn">Shuffle</button>
-      <button id="csv-upload-btn" class="nav-btn">CSV</button>
-      <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
+
+      <div class="setup-title">
+        <input type="text" id="event-title" placeholder="EVENT TITLE" spellcheck="false">
+      </div>
+
+      <div class="setup-controls" id="participant-controls">
+        <div id="name-input-wrap">
+          <input type="text" id="name-input" placeholder="Add name" spellcheck="false">
+          <button id="add-btn" title="Add">+</button>
+        </div>
+        <button id="shuffle-btn" class="nav-btn">Shuffle</button>
+        <button id="csv-upload-btn" class="nav-btn">CSV</button>
+        <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
+      </div>
+
+      <div class="setup-cta">
+        <button id="battle-btn" class="nav-btn primary" disabled>Battle Start</button>
+      </div>
     </div>
+  </section>
+
+  <!-- ─── Participants Panel (always visible — quieter during battle) ─── -->
+  <aside id="bottom-info">
     <div id="participants-wrap">
       <div id="participants"></div>
     </div>
@@ -55,8 +71,11 @@
 
   <!-- ─── Result Overlay ─── -->
   <div id="result-overlay">
-    <div id="result-title">Winner</div>
+    <!-- Order: spinning top first, then WINNER caption directly under it,
+         then the winner's name. Keeps the label visually anchored to the
+         3D image instead of floating at the top of the overlay. -->
     <div id="result-3d"></div>
+    <div id="result-title">Winner</div>
     <div id="result-winner-name"></div>
     <div id="result-list"></div>
     <div class="result-actions">

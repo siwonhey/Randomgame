@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════
 // GAME FLOW — phase transitions + elimination/end/reset
 // ═══════════════════════════════════════════
-import { state } from './state.js';
+import { state, setPhase } from './state.js';
 import { tops, addTopPhysics, repositionTops, clearTops } from './tops.js';
 import { world, registerPhysicsCallbacks } from './physics.js';
 import { scene, spotLight } from './scene.js';
@@ -78,7 +78,7 @@ registerPhysicsCallbacks({
 export function startBattle() {
   if (state.participants.length < 2 || state.phase !== 'idle') return;
 
-  state.phase = 'intro';
+  setPhase('intro');
   state.rankings = [];
   state.battleElapsed = 0;
   onUIUpdate();
@@ -96,7 +96,7 @@ export function startBattle() {
 }
 
 function startCountdown() {
-  state.phase = 'countdown';
+  setPhase('countdown');
   let count = 3;
   countdownEl.style.opacity = '1';
 
@@ -125,7 +125,7 @@ function startCountdown() {
 }
 
 function launchTops() {
-  state.phase = 'battle';
+  setPhase('battle');
   state.battleStartTime = performance.now();
   setCameraMode('battle');
   startSpinHum();
@@ -147,7 +147,7 @@ function launchTops() {
 
 // ── Battle end ──
 function endBattle(winner) {
-  state.phase = 'result';
+  setPhase('result');
   state.rankings.unshift(winner);
   stopSpinHum();
   stopEDM();
@@ -199,7 +199,7 @@ function showResult() {
 
 // ── Reset ──
 export function resetGame() {
-  state.phase = 'idle';
+  setPhase('idle');
   state.rankings = [];
   state.battleElapsed = 0;
   stopSpinHum();

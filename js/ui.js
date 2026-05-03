@@ -256,4 +256,31 @@ export function initUI() {
   });
 
   document.getElementById('event-title').addEventListener('input', saveToLocalStorage);
+
+  // ── Popup mode (re-uses the setup panel as a mid-battle modal) ──
+  const popupToggle   = document.getElementById('popup-toggle');
+  const popupClose    = document.getElementById('popup-close');
+  const popupBackdrop = document.getElementById('popup-backdrop');
+  const setupPanel    = document.getElementById('setup-panel');
+
+  const openPopup  = () => document.body.classList.add('popup-open');
+  const closePopup = () => document.body.classList.remove('popup-open');
+
+  popupToggle.addEventListener('click', openPopup);
+  popupClose.addEventListener('click', closePopup);
+  popupBackdrop.addEventListener('click', closePopup);
+
+  // Click outside the panel content while popup is open → close.
+  // (Backdrop click already handles edges; this catches gaps inside #setup-panel
+  // because the panel itself is full-screen but only its children are interactive.)
+  setupPanel.addEventListener('click', (e) => {
+    if (!document.body.classList.contains('popup-open')) return;
+    if (e.target === setupPanel) closePopup();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('popup-open')) {
+      closePopup();
+    }
+  });
 }

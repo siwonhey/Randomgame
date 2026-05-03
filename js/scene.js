@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export const gameArea = document.getElementById('game-area');
 
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a12);
+scene.background = new THREE.Color(0x000000);
 
 export const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 
@@ -19,6 +19,11 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
 dirLight.position.set(5, 10, 5);
 scene.add(dirLight);
+
+// HemisphereLight replaces per-top PointLights — gives ambient color separation
+// (cool sky / dark ground) without per-mesh light cost.
+const hemiLight = new THREE.HemisphereLight(0x1a1a3a, 0x050510, 0.55);
+scene.add(hemiLight);
 
 export const spotLight = new THREE.SpotLight(0x00BFFF, 0, 20, Math.PI / 6, 0.5);
 spotLight.position.set(0, 10, 0);

@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════
 // ENTRY — wires modules together and drives the animation loop
 // ═══════════════════════════════════════════
-import { state } from './state.js';
+import { state, setPhase } from './state.js';
 import { scene, renderer, camera, flashLight, onResize } from './scene.js';
 import './stadium.js';  // side effect: adds stadium group to scene
 import { tops, updateTopPosition } from './tops.js';
@@ -77,6 +77,7 @@ function animate() {
 }
 
 // ── Init ──
+setPhase('idle');                       // mirror to <body data-phase="idle">
 onResize();
 initUI();
 renderParticipants();
