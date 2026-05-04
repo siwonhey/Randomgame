@@ -452,8 +452,48 @@ html, body {
 .participant .remove:hover { color: rgba(255, 80, 80, 0.85); }
 
 /* ─────────────────────────────
-   HUD — Status / Timer / Countdown
+   HUD — Title / Status / Timer / Countdown
    ───────────────────────────── */
+
+/* Event title HUD — mirrors the #event-title input value; visible during
+   intro / countdown / battle / result so the arena keeps its context.
+   Hidden during idle (the input itself is the title) and during popup-open
+   (focus belongs to the editing card). */
+#title-hud {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+body[data-phase="intro"]     #title-hud,
+body[data-phase="countdown"] #title-hud,
+body[data-phase="battle"]    #title-hud,
+body[data-phase="result"]    #title-hud {
+  opacity: 1;
+}
+body.popup-open #title-hud {
+  opacity: 0;
+}
+/* Hide when empty so we don't take up vertical space with nothing. */
+#title-hud:empty {
+  opacity: 0 !important;
+}
+
 #status-bar {
   position: absolute;
   bottom: 20px;
@@ -468,6 +508,8 @@ html, body {
   pointer-events: none;
 }
 
+/* Timer sits below the title HUD (title at 32, ~20 tall → timer at 78
+   leaves ~26px breathing room). Both share the top-center vertical axis. */
 #timer-display {
   position: absolute;
   top: 78px;
@@ -872,7 +914,8 @@ body.popup-open .roster-corner {
   .participant .remove { opacity: 0.5; }   /* always visible on touch */
 
   #countdown { font-size: 84px; }
-  #timer-display { top: 96px; font-size: 20px; }
+  #title-hud { top: 18px; font-size: 13px; letter-spacing: 3px; }
+  #timer-display { top: 56px; font-size: 20px; }   /* below title-hud */
 
   /* Corner roster on mobile: full-bleed bottom strip during battle/result. */
   .roster-corner {
@@ -901,7 +944,8 @@ body.popup-open .roster-corner {
   #logo { height: 48px; min-height: 40px; }
   .setup-tagline { display: none; }
   #countdown { font-size: 56px; }
-  #timer-display { top: 56px; font-size: 16px; }
+  #title-hud { top: 10px; font-size: 11px; letter-spacing: 2.5px; }
+  #timer-display { top: 38px; font-size: 16px; }
   .roster-corner { bottom: 8px; }
   .roster-corner .participants-column { min-height: calc(5 * 26px); }
 }

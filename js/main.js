@@ -10,7 +10,7 @@ import { updateNebulaTexture } from './stadium.js';
 import { updateParticles, spawnTrail } from './particles.js';
 import { updateCinematicCamera, getCamTarget } from './camera.js';
 import { updateSpinHum } from './audio.js';
-import { initUI, renderParticipants, addParticipant } from './ui.js';
+import { initUI, renderParticipants, addParticipant, syncTitleHud } from './ui.js';
 import { loadFromLocalStorage } from './storage.js';
 
 const timerDisplay = document.getElementById('timer-display');
@@ -82,4 +82,5 @@ onResize();
 initUI();
 renderParticipants();
 loadFromLocalStorage(addParticipant);
+syncTitleHud();                          // pick up the loaded event title
 animate();

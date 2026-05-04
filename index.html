@@ -13,6 +13,10 @@
 <div id="app">
   <!-- ─── Game Area (full-screen background canvas) ─── -->
   <div id="game-area">
+    <!-- Event title HUD: cross-fades in once the setup card fades out so
+         the in-game / result frames keep contextual identity for screenshots
+         and shared captures. Mirrors #event-title input via ui.js. -->
+    <div id="title-hud"></div>
     <div id="status-bar"></div>
     <div id="timer-display"></div>
     <div id="countdown"></div>

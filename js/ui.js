@@ -130,6 +130,15 @@ export function updateRankingsUI() {
   renderParticipants();
 }
 
+// Mirror the #event-title input into #title-hud (the in-arena HUD label
+// that fades in once the setup card fades out). Called on every keystroke
+// AND once after localStorage hydration so a saved title shows up too.
+export function syncTitleHud() {
+  const titleEl = document.getElementById('event-title');
+  const hud = document.getElementById('title-hud');
+  if (titleEl && hud) hud.textContent = titleEl.value || '';
+}
+
 function copyResults() {
   const title = document.getElementById('event-title').value || 'BLADE-X BATTLE';
   
@@ -264,7 +273,10 @@ export function initUI() {
     soundBtn.style.opacity = state.soundEnabled ? '1' : '0.5';
   });
 
-  document.getElementById('event-title').addEventListener('input', saveToLocalStorage);
+  document.getElementById('event-title').addEventListener('input', () => {
+    saveToLocalStorage();
+    syncTitleHud();
+  });
 
   // ── Popup mode (re-uses the setup panel as a mid-battle modal) ──
   const popupToggle   = document.getElementById('popup-toggle');
