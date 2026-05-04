@@ -65,27 +65,29 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px 120px;     /* bottom padding leaves room for #bottom-info */
+  gap: 28px;                     /* space between card and embedded list */
+  padding: 48px 24px;
   pointer-events: none;          /* let canvas receive events through empty regions */
-  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 #setup-panel > * { pointer-events: auto; }
 
-/* Translucent card behind the setup controls — gives the input region a
-   distinct surface so it doesn't visually merge with the live arena canvas.
-   Subtle 1px hairline + soft black fill, no blur (kept cheap on mobile). */
+/* Translucent card — wide enough to fit the embedded participants list
+   (3 columns × 180px + 2 × 24px gap = 588px) inside the card padding.
+   Background bumped up to 0.92 alpha so the live arena behind doesn't
+   bleed through and compete with the card content. */
 .setup-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 28px;
   width: 100%;
-  max-width: 540px;
+  max-width: 700px;
   padding: 40px 36px;
-  background: rgba(13, 13, 13, 0.72);
+  background: rgba(13, 13, 13, 0.92);
   border: 1px solid var(--c-hairline);
   border-radius: 4px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 /* Brand block — logo + tagline */
@@ -305,46 +307,74 @@ html, body {
 }
 
 /* ─────────────────────────────
-   Bottom-Right Info Panel
-   Unified list: controls on top, participants below,
-   expands leftward in 12-per-column chunks.
+   Participants Roster
+   Rendered into TWO mirror DOM blocks (.roster-card / .roster-corner) that
+   share data via a single render path. Cross-fade per phase:
+   - Idle / popup-open : .roster-card inside the setup card is the editable
+     surface; .roster-corner is hidden.
+   - Intro/Countdown/Battle/Result : .roster-corner fades in as the HUD
+     leaderboard; .roster-card fades out with the card it's nested in.
    ───────────────────────────── */
-#bottom-info {
-  position: absolute;
-  bottom: 24px;
-  right: 28px;
-  z-index: 6;
+.roster-block {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  min-width: 240px;
-  max-width: 80vw;
+  align-items: stretch;          /* col-label uses space-between → needs width */
   pointer-events: auto;
 }
-
-/* #participant-controls now lives inside #setup-panel.setup-controls.
-   The .setup-controls flex layout above replaces the old bottom-info
-   participant controls row — these legacy rules are intentionally removed. */
-
-#participants-wrap {
+.roster-block .participants-wrap {
   display: flex;
   flex-direction: row-reverse;   /* first column on right, new columns grow leftward */
   align-items: flex-end;
   gap: 24px;
 }
-
-#participants {
+.roster-block .participants {
   display: flex;
-  flex-direction: row;           /* columns sit side-by-side */
-  align-items: flex-end;         /* bottom-anchor every column */
+  flex-direction: row;
+  align-items: flex-end;
   justify-content: flex-end;     /* first column sits on the right */
   gap: 24px;
   min-width: 180px;
 }
+
+/* Card-embedded roster: bundled into the .setup-card flow, inherits the
+   card's opacity and transform so it fades with the card. */
+.roster-card {
+  width: 100%;
+  align-self: stretch;
+  align-items: center;
+}
+.roster-card .participants-wrap {
+  justify-content: center;       /* center the columns inside the card */
+  width: 100%;
+}
+
+/* Corner-anchored roster: fixed HUD position, hidden by default (idle).
+   Phase rules below toggle opacity to fade it in/out. */
+.roster-corner {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  z-index: 6;
+  min-width: 240px;
+  max-width: 80vw;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+/* Remove buttons in the corner are non-interactive — read-only HUD.
+   The card-embedded roster is the editable surface (popup re-uses it). */
+.roster-corner .remove { display: none; }
 .participants-column {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;     /* items pinned to the bottom of each column */
+}
+
+/* Pre-allocate column height in the CORNER roster only — stops the HUD
+   from jittering as participants are eliminated. The card-embedded roster
+   hugs its content (no buffer) so the card doesn't show empty space when
+   the roster is small. */
+.roster-corner .participants-column {
   min-height: calc(12 * 26px);
 }
 
@@ -370,7 +400,7 @@ html, body {
   padding: 4px 2px;
   font-size: 12px;
   width: 180px;
-  height: 26px;                 /* keep in sync with #participants height math */
+  height: 26px;                 /* keep in sync with .participants-column min-height math */
   box-sizing: border-box;
   animation: slideUp 0.25s ease;
   transition: opacity 0.3s ease;
@@ -655,21 +685,26 @@ body.popup-open #popup-backdrop {
   pointer-events: auto;
 }
 
-/* When popup is open, force the setup-panel back into view above the
-   backdrop, regardless of phase-driven hide rules. */
+/* When popup is open, force the setup card back into view above the
+   backdrop, regardless of phase-driven hide rules. The panel itself never
+   hides anymore (it's a positioning container), so we only need to reach
+   into the card and the embedded participants list. */
 body.popup-open #setup-panel {
+  z-index: 12;
+}
+body.popup-open .setup-card {
   opacity: 1 !important;
   transform: none !important;
   pointer-events: auto;
-  z-index: 12;
 }
 
 /* Popup-mode card: fixed width, generous padding, near-opaque fill.
    This re-styles the same .setup-card that's used in idle mode but with
-   stricter modal proportions. Hides the brand block and participants list
-   so the user focuses purely on title → input → action. */
+   stricter modal proportions. The brand block and sound toggle are hidden
+   below; the participants list stays visible (FLIPped back into the panel)
+   so the roster is editable mid-battle with the names in view. */
 body.popup-open .setup-card {
-  width: 440px;
+  width: 700px;                            /* fit the embedded roster (≤588px) */
   max-width: calc(100vw - 32px);
   padding: 48px 44px;
   gap: 24px;
@@ -678,9 +713,10 @@ body.popup-open .setup-card {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
 }
 
-/* Popup mode: hide non-essentials so structure becomes title → input → action */
+/* Popup mode: hide non-essentials so structure becomes title → input → list → action.
+   The participants list stays visible (it's the whole point of the popup —
+   editing the roster mid-battle), only brand/sound chrome gets stripped. */
 body.popup-open .setup-brand,
-body.popup-open #bottom-info,
 body.popup-open #sound-toggle {
   display: none;
 }
@@ -715,39 +751,51 @@ body.popup-open #popup-close { display: flex; }
 /* ─────────────────────────────
    Phase-driven UI mode
    <body data-phase="idle|intro|countdown|battle|result">
-   - idle  : full setup panel + participants list visible
-   - intro / countdown / battle : setup panel slides up + fades; participants
-     list de-emphasized but still readable
-   - result : setup panel returns (so users can edit/replay) under the overlay
+   - idle    : setup card visible (with .roster-card embedded); .roster-corner hidden
+   - intro/countdown/battle/result : setup card fades out (taking .roster-card
+                                     with it); .roster-corner cross-fades in
+   - popup-open (during battle) : reverses to idle layout — card + embedded
+                                  roster come back, corner roster fades out
+   The card and its embedded roster share opacity (the roster inherits the
+   card's opacity), so a single transition on .setup-card animates both.
    ───────────────────────────── */
-#bottom-info {
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
 
-/* Hide the setup card during all in-game / post-game phases so the arena
-   (and later the result overlay) claims the screen. Includes 'result' to
-   prevent a flicker between battle end (setPhase 'result') and the
-   result-overlay actually fading in 2.5s later. */
-body[data-phase="intro"]     #setup-panel,
-body[data-phase="countdown"] #setup-panel,
-body[data-phase="battle"]    #setup-panel,
-body[data-phase="result"]    #setup-panel {
+/* Hide the setup card during in-game / post-game phases. Children
+   (including the embedded roster) inherit opacity 0. */
+body[data-phase="intro"]     .setup-card,
+body[data-phase="countdown"] .setup-card,
+body[data-phase="battle"]    .setup-card,
+body[data-phase="result"]    .setup-card {
   opacity: 0;
   transform: translateY(-12px) scale(0.98);
   pointer-events: none;
 }
 
-/* Participant list stays alive during battle but quieter — players still
-   want to see who's in. Hover restores full opacity. */
-body[data-phase="intro"]     #bottom-info,
-body[data-phase="countdown"] #bottom-info,
-body[data-phase="battle"]    #bottom-info {
+/* Cross-fade companion: corner roster fades in. Quieter during the live
+   battle phases (0.6) since it's a glance HUD, not the focus. */
+body[data-phase="intro"]     .roster-corner,
+body[data-phase="countdown"] .roster-corner,
+body[data-phase="battle"]    .roster-corner {
   opacity: 0.6;
+  pointer-events: auto;
 }
-body[data-phase="intro"]     #bottom-info:hover,
-body[data-phase="countdown"] #bottom-info:hover,
-body[data-phase="battle"]    #bottom-info:hover {
+body[data-phase="intro"]     .roster-corner:hover,
+body[data-phase="countdown"] .roster-corner:hover,
+body[data-phase="battle"]    .roster-corner:hover {
   opacity: 1;
+}
+body[data-phase="result"] .roster-corner {
+  opacity: 1;                    /* result overlay covers it anyway */
+  pointer-events: auto;
+}
+
+/* Popup re-opens during battle → flip back to the idle visual: corner
+   roster fades out, card (with embedded roster) fades back in. The card
+   is forced visible by the popup-open !important rule earlier; here we
+   only need to suppress the corner copy so they don't both show. */
+body.popup-open .roster-corner {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ─────────────────────────────
@@ -764,19 +812,28 @@ body[data-phase="battle"]    #bottom-info:hover {
 
 /* Tablet */
 @media (max-width: 1023px) and (min-width: 768px) {
-  #setup-panel { padding: 32px 20px 110px; }
-  .setup-card { gap: 22px; padding: 32px 28px; max-width: 480px; }
+  #setup-panel { padding: 32px 20px; }
+  .setup-card { gap: 22px; padding: 32px 28px; max-width: 520px; }
   .setup-tagline { max-width: 360px; font-size: 9.5px; letter-spacing: 1.8px; }
   .setup-title #event-title { font-size: 22px; letter-spacing: 1.5px; }
-  #bottom-info { right: 16px; bottom: 16px; }
+
+  /* Tablet corner offset — pull the HUD a touch closer to the edge. */
+  .roster-corner {
+    right: 16px;
+    bottom: 16px;
+  }
 }
 
 /* Mobile */
 @media (max-width: 767px) {
+  /* Card sits at top, embedded roster scrolls horizontally inside it.
+     Setup panel scrolls vertically so a tall card doesn't get clipped. */
   #setup-panel {
-    padding: 24px 16px 140px;     /* extra bottom space for the participants sheet */
+    padding: 24px 16px;
+    padding-top: 6vh;
     justify-content: flex-start;
-    padding-top: 8vh;
+    overflow-y: auto;
+    gap: 20px;
   }
   .setup-card {
     gap: 18px;
@@ -794,41 +851,46 @@ body[data-phase="battle"]    #bottom-info:hover {
   .setup-controls { justify-content: flex-start; gap: 6px; }
   #name-input { width: 100%; max-width: 240px; }
 
-  /* Bottom info becomes a full-width sheet anchored to the bottom on mobile.
-     Participants list scrolls horizontally to stay out of the canvas. */
-  #bottom-info {
-    right: 12px;
-    left: 12px;
-    bottom: 12px;
-    min-width: unset;
-    max-width: unset;
-  }
-  #participants-wrap {
+  /* Roster blocks: horizontal scroll inside the wrap if columns exceed width. */
+  .roster-block .participants-wrap {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
+    width: 100%;
   }
-  #participants { max-height: 30vh; min-width: unset; }
-  .participants-column { min-height: calc(8 * 26px); }
-  .participant { width: 150px; }
+  .roster-block .participants { max-height: 30vh; min-width: unset; }
 
-  /* Mobile: remove buttons should always be visible (no hover on touch). */
-  .participant .remove { opacity: 0.5; }
+  /* Pre-allocate column height only when the corner roster is the active
+     surface, so the HUD doesn't jitter on eliminations. Idle/popup keeps
+     min-height: 0 (hug content). */
+  .roster-corner .participants-column {
+    min-height: calc(8 * 26px);
+  }
+
+  .participant { width: 150px; }
+  .participant .remove { opacity: 0.5; }   /* always visible on touch */
 
   #countdown { font-size: 84px; }
   #timer-display { top: 96px; font-size: 20px; }
 
-  /* During battle on mobile, collapse the participants panel to a thin strip
-     so the canvas claims the screen. Tap to bring it back. */
-  body[data-phase="battle"] #bottom-info {
-    opacity: 0.4;
-    transform: translateY(50%);
+  /* Corner roster on mobile: full-bleed bottom strip during battle/result. */
+  .roster-corner {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    min-width: 0;
+    max-width: none;
   }
-  body[data-phase="battle"] #bottom-info:active,
-  body[data-phase="battle"] #bottom-info:focus-within {
+
+  /* During live battle on mobile, dim the strip aggressively so it reads
+     as a glance HUD; touch/focus restores full visibility. */
+  body[data-phase="battle"]:not(.popup-open) .roster-corner {
+    opacity: 0.35;
+  }
+  body[data-phase="battle"]:not(.popup-open) .roster-corner:active,
+  body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -840,6 +902,6 @@ body[data-phase="battle"]    #bottom-info:hover {
   .setup-tagline { display: none; }
   #countdown { font-size: 56px; }
   #timer-display { top: 56px; font-size: 16px; }
-  #bottom-info { bottom: 8px; }
-  .participants-column { min-height: calc(5 * 26px); }
+  .roster-corner { bottom: 8px; }
+  .roster-corner .participants-column { min-height: calc(5 * 26px); }
 }

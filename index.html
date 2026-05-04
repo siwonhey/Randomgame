@@ -22,10 +22,10 @@
   <div id="popup-backdrop"></div>
   <button id="popup-toggle" title="Edit Participants" aria-label="Edit Participants">&#x2699;</button>
 
-  <!-- ─── Setup Panel (centered card; visible during idle/result;
-       reused as popup-modal during battle when #popup-toggle is clicked) ─── -->
-  <!-- DOM IDs are preserved from the previous top-nav + bottom-info split
-       so that ui.js / game.js event bindings keep working unchanged. -->
+  <!-- ─── Setup Panel ─── Centered card with all setup controls plus an
+       embedded participants roster. Visible during idle; cross-fades out
+       during battle phases (the .roster-corner below takes over as HUD).
+       Re-opens during battle as a modal when ⚙ (#popup-toggle) is clicked. -->
   <section id="setup-panel">
     <!-- The setup-card wraps all setup content with a translucent fill so the
          input region reads as a distinct surface separate from the live canvas
@@ -52,20 +52,35 @@
         <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
       </div>
 
+      <!-- Participants list bundled INSIDE the card. Inherits the card's
+           opacity, so it fades together with the card on phase transition.
+           A mirror copy lives at .roster-corner below for the battle HUD. -->
+      <aside class="roster-block roster-card">
+        <div class="participants-wrap">
+          <div class="participants"></div>
+        </div>
+        <div class="col-label">
+          <span>Participants</span>
+          <span class="count-display">0 / 30</span>
+        </div>
+      </aside>
+
       <div class="setup-cta">
         <button id="battle-btn" class="nav-btn primary" disabled>Battle Start</button>
       </div>
     </div>
   </section>
 
-  <!-- ─── Participants Panel (always visible — quieter during battle) ─── -->
-  <aside id="bottom-info">
-    <div id="participants-wrap">
-      <div id="participants"></div>
+  <!-- ─── Corner Roster — fixed bottom-right HUD that fades in during
+       intro/countdown/battle/result. Hidden during idle and popup-open
+       (the card-embedded roster is the editable surface in those phases). -->
+  <aside class="roster-block roster-corner">
+    <div class="participants-wrap">
+      <div class="participants"></div>
     </div>
     <div class="col-label">
       <span>Participants</span>
-      <span id="count-display">0 / 30</span>
+      <span class="count-display">0 / 30</span>
     </div>
   </aside>
 

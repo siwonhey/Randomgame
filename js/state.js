@@ -11,7 +11,9 @@ export const state = {
 };
 
 // Mirror state.phase to <body data-phase="..."> so CSS can switch UI mode.
-// (Setup vs Battle layouts live in style.css and key off this attribute.)
+// Idle: setup card visible (with embedded .roster-card); .roster-corner hidden.
+// Battle phases: card fades out; .roster-corner cross-fades in as the HUD.
+// The transition is purely opacity-based — both rosters are always rendered.
 export function setPhase(next) {
   state.phase = next;
   if (typeof document !== 'undefined') {
@@ -20,8 +22,6 @@ export function setPhase(next) {
     // where the setup panel must NOT be visible:
     //   - 'result' : battle just ended, result overlay will fade in shortly
     //   - 'idle'   : post-reset / first load, setup panel is the natural view
-    // Without this, the popup-open !important rule would keep the setup
-    // panel layered over the arena (or over a not-yet-shown result overlay).
     if (next === 'result' || next === 'idle') {
       document.body.classList.remove('popup-open');
     }

@@ -8,9 +8,12 @@ import {
 } from './game.js';
 import { saveToLocalStorage } from './storage.js';
 
-const participantsEl = document.getElementById('participants');
+// Roster is mirrored in two DOM blocks (.roster-card inside the setup card,
+// .roster-corner pinned bottom-right). Both share the same render pass — the
+// columns are built into a fragment and cloned into each .participants slot.
+const rosterContainers = () => document.querySelectorAll('.roster-block .participants');
+const countDisplays = () => document.querySelectorAll('.roster-block .count-display');
 const nameInput = document.getElementById('name-input');
-const countDisplay = document.getElementById('count-display');
 const battleBtn = document.getElementById('battle-btn');
 
 function ordinal(n) {
@@ -29,7 +32,7 @@ function setInputsDisabled(disabled) {
   document.getElementById('event-title').disabled = disabled;
   document.getElementById('shuffle-btn').disabled = disabled;
   document.getElementById('csv-upload-btn').disabled = disabled;
-  participantsEl.querySelectorAll('.remove').forEach(b => { b.disabled = disabled; });
+  document.querySelectorAll('.roster-block .remove').forEach(b => { b.disabled = disabled; });
 }
 
 export function addParticipant(name) {
@@ -57,32 +60,30 @@ function removeParticipant(name) {
 
 // Unified list: active participants on top, eliminated sink to the bottom in
 // elimination order (first eliminated = lowest rank, pinned at the very bottom).
+// Rendered into BOTH .roster-card and .roster-corner so cross-fading between
+// them shows continuous data — the visual transition is opacity only, not
+// content rebuild. Build columns once, then clone into each container.
 export function renderParticipants() {
   const eliminatedNames = state.rankings.map(r => r.name);
   const eliminatedSet = new Set(eliminatedNames);
   const activeParticipants = state.participants.filter(p => !eliminatedSet.has(p.name));
 
   const total = state.participants.length;
-  // Build rows top-to-bottom: active first, then most-recent eliminated,
-  // down to first-eliminated (pinned at very bottom of the rightmost column).
   const rows = [];
   activeParticipants.forEach(p => rows.push({ p, eliminated: false, rank: null }));
   state.rankings.forEach((top, i) => {
     const activeCount = total - state.rankings.length;
-    const rank = activeCount + 1 + i; // i=0 is most-recent eliminated
+    const rank = activeCount + 1 + i;
     const participant = state.participants.find(p => p.name === top.name) || top;
     rows.push({ p: participant, eliminated: true, rank });
   });
 
-  participantsEl.innerHTML = '';
-
-  // Chunk into bottom-anchored columns of 12. rightmost column holds the
-  // TAIL of the list (first-eliminated pinned bottom-right), and additional
-  // columns spill LEFT holding earlier slices.
+  // Build columns into a detached fragment so we can clone it cheaply into
+  // every roster container without re-running the layout math.
   const PER_COL = 12;
   const N = rows.length;
   const colCount = Math.max(1, Math.ceil(N / PER_COL));
-  // Render left-to-right in DOM so the first child is the leftmost column
+  const template = document.createElement('div');
   for (let c = colCount - 1; c >= 0; c--) {
     const end = N - c * PER_COL;
     const start = Math.max(0, end - PER_COL);
@@ -103,17 +104,25 @@ export function renderParticipants() {
       `;
       colEl.appendChild(div);
     });
-    // Leftmost column appears on the far left of DOM; rightmost (c=0) last.
-    participantsEl.insertBefore(colEl, null);
+    template.appendChild(colEl);
   }
 
-  participantsEl.querySelectorAll('.remove').forEach(btn => {
+  rosterContainers().forEach(container => {
+    container.innerHTML = template.innerHTML;
+  });
+
+  // Wire remove handlers on every roster instance. The phase guard inside
+  // means the corner-roster's remove buttons (visible only via DOM, hidden
+  // by CSS) are inert during battle anyway — defensive double-lock.
+  document.querySelectorAll('.roster-block .remove').forEach(btn => {
     btn.addEventListener('click', () => {
       if (state.phase !== 'idle') return;
       removeParticipant(btn.dataset.name);
     });
   });
-  countDisplay.textContent = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
+
+  const countText = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
+  countDisplays().forEach(el => { el.textContent = countText; });
   battleBtn.disabled = state.participants.length < 2 || state.phase !== 'idle';
 }
 
