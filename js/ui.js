@@ -12,7 +12,6 @@ import { saveToLocalStorage } from './storage.js';
 // .roster-corner pinned bottom-right). Both share the same render pass — the
 // columns are built into a fragment and cloned into each .participants slot.
 const rosterContainers = () => document.querySelectorAll('.roster-block .participants');
-const countDisplays = () => document.querySelectorAll('.roster-block .count-display');
 const nameInput = document.getElementById('name-input');
 const battleBtn = document.getElementById('battle-btn');
 
@@ -80,13 +79,15 @@ export function renderParticipants() {
 
   // Build columns into a detached fragment so we can clone it cheaply into
   // every roster container without re-running the layout math.
-  const PER_COL = 12;
+  // Reference INPUT_PC.jpg / INPUT_MO.jpg: fill top-down in left column first,
+  // continue in right column when the column is full. PER_COL = 10.
+  const PER_COL = 10;
   const N = rows.length;
   const colCount = Math.max(1, Math.ceil(N / PER_COL));
   const template = document.createElement('div');
-  for (let c = colCount - 1; c >= 0; c--) {
-    const end = N - c * PER_COL;
-    const start = Math.max(0, end - PER_COL);
+  for (let c = 0; c < colCount; c++) {
+    const start = c * PER_COL;
+    const end = Math.min(N, start + PER_COL);
     const slice = rows.slice(start, end);
     const colEl = document.createElement('div');
     colEl.className = 'participants-column';
@@ -121,8 +122,12 @@ export function renderParticipants() {
     });
   });
 
-  const countText = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
-  countDisplays().forEach(el => { el.textContent = countText; });
+  // Card badge: just the count number (matches INPUT_PC.jpg red badge).
+  // HUD corner: "N / MAX" so the in-game roster reads as a leaderboard.
+  const cardCount = `${state.participants.length}`;
+  const hudCount  = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
+  document.querySelectorAll('.count-badge.count-display').forEach(el => { el.textContent = cardCount; });
+  document.querySelectorAll('.count-display-hud').forEach(el => { el.textContent = hudCount; });
   battleBtn.disabled = state.participants.length < 2 || state.phase !== 'idle';
 }
 
@@ -140,48 +145,38 @@ export function syncTitleHud() {
 }
 
 function copyResults() {
-  const title = document.getElementById('event-title').value || 'BLADE-X BATTLE';
-  
-  // 텍스트 구성 수정 (박스 디자인 적용)
+  const title = document.getElementById('event-title').value || 'BLITZ BATTLE';
+
   let text = `╔${'═'.repeat(28)}╗\n`;
-  text += `   ✦ BLADE-X : BATTLE REPORT ✦\n`;
+  text += `   ✦ BLITZ : BATTLE REPORT ✦\n`;
   text += `╚${'═'.repeat(28)}╝\n`;
   text += ` 📢 [ ${title} ]\n`;
   text += ` ───\n`;
   text += `  REDEFINING THE EXPERIENCE OF RANDOM SELECTION\n`;
   text += ` ───\n\n`;
-  
-  // 순위 리스트 (메달 및 등수 강조)
+
   state.rankings.forEach((top, i) => {
     let prefix;
     if (i === 0) prefix = '  🏆  WINNER : ';
     else if (i === 1) prefix = '  🥈  2nd : ';
     else if (i === 2) prefix = '  🥉  3rd : ';
     else prefix = `   ${i + 1}. `;
-    
     text += `${prefix}${top.name}\n`;
-    if (i === 0) text += '\n'; // 우승자 아래 한 줄 띄움
+    if (i === 0) text += '\n';
   });
-  
+
   text += `\n ──────────────────────────────\n`;
   text += `  DRIVEN BY PHYSICS, EXPLORE THE ARC.`;
-
-  // 하단 게임 정보 및 링크 추가
   text += `\n ──────────────────────────────\n`;
-  text += `  🎮 GAME: METALBLADE\n`; // 게임명 노출
-  text += `  🔗 LINK: https://randomgame-7pg4.vercel.app/\n`; // 링크 노출
+  text += `  🎮 GAME: BLITZ\n`;
+  text += `  🔗 LINK: https://randomgame-7pg4.vercel.app/\n`;
   text += ` ──────────────────────────────\n`;
-  text += `  DRIVEN BY PHYSICS, EXPLORE THE ARC.`;
 
-  // 클립보드 복사 실행
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btn-copy');
-    btn.textContent = 'Copied!';
-    btn.style.color = 'rgba(255,255,255,0.6)';
-    setTimeout(() => {
-      btn.textContent = 'Copy Results';
-      btn.style.color = '';
-    }, 1500);
+    const original = btn.textContent;
+    btn.textContent = 'COPIED!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
   });
 }
 
@@ -219,10 +214,22 @@ function shuffleParticipants() {
   state.participants.forEach(p => addTopPhysics(p.name, p.color));
   renderParticipants();
   saveToLocalStorage();
+}
 
-  const btn = document.getElementById('shuffle-btn');
-  btn.textContent = 'Shuffled';
-  setTimeout(() => { btn.textContent = 'Shuffle'; }, 1000);
+// Title required to start. If empty when battle button is clicked, mark the
+// input with .warn (red) and swap the placeholder to a prompt; clear on next
+// keystroke. Reference: REDESIGN_0510 §1-2 — "타이틀 미 입력시 경고 메시지".
+function validateTitle() {
+  const titleEl = document.getElementById('event-title');
+  if (titleEl.value.trim()) {
+    titleEl.classList.remove('warn');
+    titleEl.placeholder = 'TITLE';
+    return true;
+  }
+  titleEl.classList.add('warn');
+  titleEl.placeholder = 'PLEASE ENTER TITLE';
+  titleEl.focus();
+  return false;
 }
 
 export function initUI() {
@@ -255,7 +262,10 @@ export function initUI() {
     nameInput.value = '';
   });
 
-  battleBtn.addEventListener('click', startBattle);
+  battleBtn.addEventListener('click', () => {
+    if (!validateTitle()) return;
+    startBattle();
+  });
   document.getElementById('btn-retry').addEventListener('click', resetGame);
   document.getElementById('btn-copy').addEventListener('click', copyResults);
 
@@ -269,11 +279,17 @@ export function initUI() {
   const soundBtn = document.getElementById('sound-toggle');
   soundBtn.addEventListener('click', () => {
     state.soundEnabled = !state.soundEnabled;
-    soundBtn.innerHTML = state.soundEnabled ? '&#x1f50a;' : '&#x1f507;';
-    soundBtn.style.opacity = state.soundEnabled ? '1' : '0.5';
+    soundBtn.classList.toggle('muted', !state.soundEnabled);
+    soundBtn.title = state.soundEnabled ? 'Mute' : 'Unmute';
   });
 
   document.getElementById('event-title').addEventListener('input', () => {
+    // Clear the warning state as soon as the user starts typing.
+    const titleEl = document.getElementById('event-title');
+    if (titleEl.classList.contains('warn') && titleEl.value.trim()) {
+      titleEl.classList.remove('warn');
+      titleEl.placeholder = 'TITLE';
+    }
     saveToLocalStorage();
     syncTitleHud();
   });

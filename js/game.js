@@ -190,8 +190,11 @@ function showResult() {
     const rankSpan = document.createElement('span');
     rankSpan.className = 'result-rank';
     rankSpan.textContent = medal;
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'result-name';
+    nameSpan.textContent = top.name;
     div.appendChild(rankSpan);
-    div.appendChild(document.createTextNode(top.name));
+    div.appendChild(nameSpan);
     div.style.animationDelay = `${i * 0.08}s`;
     resultList.appendChild(div);
   });

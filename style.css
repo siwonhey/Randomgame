@@ -1,27 +1,25 @@
 /* ═══════════════════════════════════════════
-   Metal Blade — Beyblade Survival Battle (v1.2)
-   Layout: setup (idle) shows full UI; battle phase minimizes it.
-   Style:  Inter, transparent panels, monotone buttons.
-   Phase-driven UI mode comes from <body data-phase="...">
+   BLITZ — Random Selection Battle (UI redesign / 2026-05-10)
+   Layout reference: Landing.jpg / INPUT_PC.jpg / INPUT_MO.jpg / RESULT.jpg
+   Faithful reproduction of the supplied reference UI — DO NOT redesign.
    ═══════════════════════════════════════════ */
 
 :root {
   --c-canvas:      #000000;
-  --c-surface:     #0d0d0d;
-  --c-surface-md:  #141414;
-  --c-surface-hi:  #1e1e1e;
-  --c-hairline:    #262626;
-  --c-hairline-hi: #383838;
+  --c-card:        #161617;
+  --c-card-2:      #1f1f20;
+  --c-card-soft:   rgba(255,255,255,0.04);
+  --c-hairline:    rgba(255,255,255,0.10);
+  --c-hairline-hi: rgba(255,255,255,0.18);
   --c-ink:         #ffffff;
-  --c-body:        #cccccc;
-  --c-muted:       #888888;
-  --c-muted-soft:  #555555;
-  --c-accent:      #00BFFF;
+  --c-body:        rgba(255,255,255,0.78);
+  --c-muted:       rgba(255,255,255,0.55);
+  --c-faint:       rgba(255,255,255,0.30);
+  --c-accent-red:  #E63946;
 
-  /* Font trinity (DESIGN-bugatti.md style: Display / Body / Mono UI) */
-  --f-display: 'Rajdhani', 'Inter', 'Pretendard', sans-serif;
-  --f-body:    'Inter', 'Pretendard', sans-serif;
-  --f-mono:    'Space Mono', ui-monospace, 'Cascadia Mono', monospace;
+  /* Reference UI is built on Hanken Grotesk (body) + Space Grotesk (display) */
+  --f-display: 'Space Grotesk', 'Hanken Grotesk', sans-serif;
+  --f-body:    'Hanken Grotesk', 'Inter', sans-serif;
 }
 
 *, *::before, *::after {
@@ -35,248 +33,147 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: var(--c-canvas);
-  color: rgba(255, 255, 255, 0.6);
-  font-family: 'Inter', 'Pretendard', sans-serif;
-  font-weight: 300;
+  color: var(--c-body);
+  font-family: var(--f-body);
+  font-weight: 400;
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::selection { background: rgba(0, 191, 255, 0.3); }
-::-webkit-scrollbar { width: 3px; }
+::selection { background: rgba(230, 57, 70, 0.35); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
 
 #app {
   position: relative;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
 }
 
-/* ─────────────────────────────
-   Setup Panel (centered card)
-   Visible during idle / result phases. Slides out during battle.
-   Background is transparent — Three.js arena shows through.
-   ───────────────────────────── */
-#setup-panel {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 10;
+/* ─────────────────────────────────────────────
+   Landing Splash
+   All-black background; LOGO.mp4 plays once and the splash fades out
+   when the video ends. Restart from the Result page does NOT replay.
+   ───────────────────────────────────────────── */
+#landing-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;                     /* space between card and embedded list */
-  padding: 48px 24px;
-  pointer-events: none;          /* let canvas receive events through empty regions */
+  background: #000;
+  transition: opacity 0.6s ease;
 }
-#setup-panel > * { pointer-events: auto; }
-
-/* Translucent card — wide enough to fit the embedded participants list
-   (3 columns × 180px + 2 × 24px gap = 588px) inside the card padding.
-   Background bumped up to 0.92 alpha so the live arena behind doesn't
-   bleed through and compete with the card content. */
-.setup-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  width: 100%;
-  max-width: 700px;
-  padding: 40px 36px;
-  background: rgba(13, 13, 13, 0.92);
-  border: 1px solid var(--c-hairline);
-  border-radius: 4px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+#landing-splash.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* Brand block — logo + tagline */
-.setup-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
+#landing-logo {
+  width: 320px;
+  height: auto;
+  max-width: 60vw;
+  display: block;
+  background: #000;
 }
-#logo {
-  height: 9vw;
-  min-height: 56px;
-  max-height: 110px;
+
+/* ─────────────────────────────────────────────
+   Brand Block (top-left, persists from input → game → result)
+   ───────────────────────────────────────────── */
+.brand-block {
+  position: fixed;
+  top: 28px;
+  left: 36px;
+  z-index: 14;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.4s ease;
+}
+.brand-mark {
+  display: flex;
+  align-items: center;
+}
+/* Reference INPUT_PC/INPUT_MO: brand is a single image (LOGO.png). No text. */
+.brand-icon {
+  height: 32px;
   width: auto;
   display: block;
-  opacity: 0.95;
+  object-fit: contain;
+  opacity: 0.98;
 }
-.setup-tagline {
-  max-width: 460px;
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 2.2px;
-  line-height: 1.6;
-  text-transform: uppercase;
-  color: var(--c-muted);
-  margin: 0;
-}
-
-/* Title input — bottom-border display style */
-.setup-title { width: 100%; max-width: 460px; display: flex; justify-content: center; }
-.setup-title #event-title {
-  width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--c-hairline-hi);
-  color: var(--c-ink);
-  font-family: var(--f-display);
-  font-size: 26px;
-  font-weight: 400;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  text-align: center;
-  padding: 8px 4px;
-  outline: none;
-  transition: border-color 0.25s;
-}
-.setup-title #event-title::placeholder {
-  color: var(--c-muted-soft);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-.setup-title #event-title:focus { border-bottom-color: var(--c-ink); }
-
-/* Setup controls row — name input + shuffle + csv */
-.setup-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* Setup CTA — Battle Start, weighty pill */
-.setup-cta { display: flex; justify-content: center; }
-
-/* Pill-shaped input wrapper — input on the left, [+] icon flush-right.
-   Higher contrast: subtle fill + brighter border so the input region reads
-   clearly against translucent card / dim backdrop. */
-#name-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9999px;
-  padding: 0 4px 0 16px;
-  height: 38px;
-  transition: border-color 0.2s, background 0.2s;
-}
-#name-input-wrap:focus-within {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--c-ink);
-}
-
-#name-input {
-  width: 160px;
-  background: transparent;
-  border: none;
-  color: var(--c-ink);
+.brand-tagline {
+  margin-top: 8px;
+  /* Round-4 feedback: nudge further left so the tagline sits under the B,
+     not the L. LOGO.png is 98×38; at display height 32px the icon swirl
+     occupies roughly the leading 12px and BLITZ begins shortly after. */
+  padding-left: 12px;
   font-family: var(--f-body);
-  font-size: 14px;
-  padding: 0 26px 0 0;
-  outline: none;
-}
-#name-input::placeholder { color: var(--c-muted); }
-
-#add-btn {
-  position: absolute;
-  right: 4px;
-  width: 30px; height: 30px;
-  border-radius: 9999px;
-  background: transparent;
-  border: none;
-  color: var(--c-body);
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-#add-btn:hover:not(:disabled) {
-  color: var(--c-ink);
-  background: rgba(255,255,255,0.12);
-}
-
-/* Pill button — higher contrast with brighter border + small subtle fill on
-   primary so the CTA stands out clearly against any backdrop. */
-.nav-btn {
-  padding: 8px 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 9999px;
-  color: var(--c-body);
-  font-family: var(--f-mono);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 2px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  height: 38px;
-  line-height: 1;
-}
-.nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--c-ink);
-  color: var(--c-ink);
-}
-.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.nav-btn.primary {
-  padding: 12px 30px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.75);
-  color: var(--c-ink);
-  letter-spacing: 2.5px;
-  font-weight: 700;
-}
-.nav-btn.primary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: var(--c-ink);
-  color: var(--c-ink);
-  box-shadow: 0 0 24px rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.55);
+  line-height: 1.55;
+  white-space: nowrap;       /* enforced 2 lines via <br> in markup */
 }
 
-#csv-input { display: none; }
+/* Hide brand block while landing splash is active */
+body[data-landing="active"] .brand-block,
+body[data-landing="active"] #sound-toggle,
+body[data-landing="active"] #setup-panel,
+body[data-landing="active"] .roster-corner {
+  opacity: 0;
+  pointer-events: none;
+}
 
-/* ─────────────────────────────
-   Sound Toggle (fixed bottom-left)
-   ───────────────────────────── */
+/* ─────────────────────────────────────────────
+   Sound Toggle (fixed top-right)
+   ───────────────────────────────────────────── */
 #sound-toggle {
   position: fixed;
-  bottom: 18px;
-  left: 18px;
+  top: 28px;
+  right: 36px;
   z-index: 15;
-  width: 34px;
-  height: 30px;
-  border-radius: 4px;
-  background: rgba(10, 10, 18, 0.55);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #ffffff;
-  font-size: 14px;
-  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.75);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, color 0.2s ease;
+  overflow: visible;
 }
 #sound-toggle:hover {
-  border-color: rgba(255,255,255,0.3);
-  color: #ffffff;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+/* Muted state: hide the wave lines, draw a diagonal slash through the speaker.
+   Reference INPUT_PC.jpg / INPUT_MO.jpg show the icon as a slashed speaker. */
+#sound-toggle.muted { color: rgba(255,255,255,0.55); }
+#sound-toggle.muted svg path { display: none; }
+#sound-toggle.muted::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 2px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
 }
 
-/* ─────────────────────────────
-   Game Area (full-screen canvas)
-   ───────────────────────────── */
+/* ─────────────────────────────────────────────
+   Game Area (full-screen Three.js canvas)
+   ───────────────────────────────────────────── */
 #game-area {
   position: absolute;
   inset: 0;
@@ -289,492 +186,53 @@ html, body {
   height: 100%;
 }
 
-/* Vignette — keeps the arena center bright, presses down the edges so the
-   tool-like flat background reads as a focused stage. CSS-only, GPU-composited,
-   essentially zero render cost. */
-#game-area::after {
-  content: '';
+/* ─────────────────────────────────────────────
+   Setup Panel (positioning container) + Setup Card (the modal-like form)
+   Reference: INPUT_PC.jpg (card centered around right half on desktop)
+              INPUT_MO.jpg (card occupies most of the viewport on mobile)
+   ───────────────────────────────────────────── */
+#setup-panel {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse 65% 60% at 50% 50%,
-    transparent 0%,
-    rgba(0, 0, 0, 0.45) 70%,
-    rgba(0, 0, 0, 0.85) 100%
-  );
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* ─────────────────────────────
-   Participants Roster
-   Rendered into TWO mirror DOM blocks (.roster-card / .roster-corner) that
-   share data via a single render path. Cross-fade per phase:
-   - Idle / popup-open : .roster-card inside the setup card is the editable
-     surface; .roster-corner is hidden.
-   - Intro/Countdown/Battle/Result : .roster-corner fades in as the HUD
-     leaderboard; .roster-card fades out with the card it's nested in.
-   ───────────────────────────── */
-.roster-block {
+  z-index: 10;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;          /* col-label uses space-between → needs width */
-  pointer-events: auto;
-}
-.roster-block .participants-wrap {
-  display: flex;
-  flex-direction: row-reverse;   /* first column on right, new columns grow leftward */
-  align-items: flex-end;
-  gap: 24px;
-}
-.roster-block .participants {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: flex-end;     /* first column sits on the right */
-  gap: 24px;
-  min-width: 180px;
-}
-
-/* Card-embedded roster: bundled into the .setup-card flow, inherits the
-   card's opacity and transform so it fades with the card. */
-.roster-card {
-  width: 100%;
-  align-self: stretch;
-  align-items: center;
-}
-.roster-card .participants-wrap {
-  justify-content: center;       /* center the columns inside the card */
-  width: 100%;
-}
-
-/* Corner-anchored roster: fixed HUD position, hidden by default (idle).
-   Phase rules below toggle opacity to fade it in/out. */
-.roster-corner {
-  position: fixed;
-  bottom: 24px;
-  right: 28px;
-  z-index: 6;
-  min-width: 240px;
-  max-width: 80vw;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease;
-}
-/* Remove buttons in the corner are non-interactive — read-only HUD.
-   The card-embedded roster is the editable surface (popup re-uses it). */
-.roster-corner .remove { display: none; }
-.participants-column {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;     /* items pinned to the bottom of each column */
-}
-
-/* Pre-allocate column height in the CORNER roster only — stops the HUD
-   from jittering as participants are eliminated. The card-embedded roster
-   hugs its content (no buffer) so the card doesn't show empty space when
-   the roster is small. */
-.roster-corner .participants-column {
-  min-height: calc(12 * 26px);
-}
-
-.col-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-family: var(--f-mono);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--c-body);
-  padding-top: 6px;
-  border-top: 1px solid var(--c-hairline);
-  margin-top: 8px;
-}
-
-.participant {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 2px;
-  font-size: 12px;
-  width: 180px;
-  height: 26px;                 /* keep in sync with .participants-column min-height math */
-  box-sizing: border-box;
-  animation: slideUp 0.25s ease;
-  transition: opacity 0.3s ease;
-}
-
-.participant .rank-tag {
-  width: 28px;
-  color: rgba(255,255,255,0.45);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 10px;
-  letter-spacing: 0.4px;
-  text-transform: lowercase;
-  flex-shrink: 0;
-}
-.participant:not(.eliminated) .rank-tag { visibility: hidden; }
-
-.participant.eliminated { opacity: 0.55; }
-.participant.eliminated .name { color: rgba(255,255,255,0.45); }
-.participant.eliminated .dot { opacity: 0.35; box-shadow: none; }
-
-.participant .dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
-}
-
-.participant .name {
-  flex: 1;
-  color: rgba(255,255,255,0.65);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.participant .remove {
-  opacity: 0;
-  width: 18px; height: 18px;
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.3);
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.participant:hover .remove { opacity: 1; }
-.participant .remove:hover { color: rgba(255, 80, 80, 0.85); }
-
-/* ─────────────────────────────
-   HUD — Title / Status / Timer / Countdown
-   ───────────────────────────── */
-
-/* Event title HUD — mirrors the #event-title input value; visible during
-   intro / countdown / battle / result so the arena keeps its context.
-   Hidden during idle (the input itself is the title) and during popup-open
-   (focus belongs to the editing card). */
-#title-hud {
-  position: absolute;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--f-display);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-  max-width: 80vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-}
-body[data-phase="intro"]     #title-hud,
-body[data-phase="countdown"] #title-hud,
-body[data-phase="battle"]    #title-hud,
-body[data-phase="result"]    #title-hud {
-  opacity: 1;
-}
-body.popup-open #title-hud {
-  opacity: 0;
-}
-/* Hide when empty so we don't take up vertical space with nothing. */
-#title-hud:empty {
-  opacity: 0 !important;
-}
-
-#status-bar {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--f-mono);
-  font-size: 11px;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
-  z-index: 5;
-  pointer-events: none;
-}
-
-/* Timer sits below the title HUD (title at 32, ~20 tall → timer at 78
-   leaves ~26px breathing room). Both share the top-center vertical axis. */
-#timer-display {
-  position: absolute;
-  top: 78px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--f-mono);
-  font-size: 24px;
-  font-weight: 400;
-  letter-spacing: 1.5px;
-  color: rgba(255,255,255,0.5);
-  z-index: 5;
-  pointer-events: none;
-  font-variant-numeric: tabular-nums;
-  transition: color 0.5s;
-}
-#timer-display.urgent { color: rgba(255, 60, 60, 0.85); }
-
-#countdown {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--f-display);
-  font-size: 140px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: rgba(0, 191, 255, 0.95);
-  text-shadow: 0 0 60px rgba(0, 191, 255, 0.4);
-  pointer-events: none;
-  opacity: 0;
-  z-index: 5;
-  font-variant-numeric: tabular-nums;
-  transition: transform 0.2s ease-out, opacity 0.3s;
-}
-
-/* ─────────────────────────────
-   Result Overlay
-   ───────────────────────────── */
-#result-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 18, 0.88);
-  display: none;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 20;
-  backdrop-filter: blur(10px);
-  padding: 40px 20px;
-}
-#result-overlay.show { display: flex; animation: fadeIn 0.5s ease; }
-
-#result-title {
-  font-family: var(--f-mono);
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  color: var(--c-muted);
-  margin-bottom: 16px;
-  position: relative;
-  z-index: 1;
-}
-
-#result-3d {
-  width: 320px;
-  height: 320px;
-  margin: 0 auto;
-  position: relative;
-}
-
-#result-3d canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-#result-winner-name {
-  font-family: var(--f-display);
-  font-size: 52px;
-  font-weight: 500;
-  color: var(--c-ink);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  text-shadow: 0 0 30px rgba(255,255,255,0.35);
-  margin-top: -4px;
-  margin-bottom: 18px;
-  text-align: center;
-  animation: fadeIn 0.6s ease backwards;
-  animation-delay: 0.2s;
-}
-
-#result-list {
-  text-align: center;
-  margin-bottom: 32px;
-  max-height: 30vh;
+  /* Top padding clears the fixed brand block at any responsive width — the
+     card never climbs above ~130px so it can't overlap the BLITZ logo +
+     tagline (round-3 feedback). */
+  padding: 130px 24px 32px;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
   overflow-y: auto;
-  padding: 0 8px;
 }
-#result-list .result-item {
-  padding: 7px 20px;
-  font-size: 16px;
-  letter-spacing: 0.3px;
-  color: rgba(255,255,255,0.65);
-  font-variant-numeric: tabular-nums;
-  animation: fadeIn 0.4s ease backwards;
-}
-#result-list .result-item .result-rank {
-  display: inline-block;
-  min-width: 44px;
-  text-align: right;
-  margin-right: 14px;
-  color: rgba(255,255,255,0.35);
-  font-size: 13px;
-  text-transform: lowercase;
-  letter-spacing: 0.4px;
-}
+#setup-panel > * { pointer-events: auto; }
 
-.result-actions { display: flex; gap: 14px; }
-.result-actions button {
-  padding: 12px 28px;
-  height: 42px;
-  background: transparent;
-  border: 1px solid var(--c-hairline-hi);
-  border-radius: 9999px;
-  color: var(--c-muted);
-  font-family: var(--f-mono);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.result-actions button:hover {
-  border-color: var(--c-ink);
-  color: var(--c-ink);
-}
-.result-actions button.primary {
-  border-color: rgba(255,255,255,0.55);
-  color: var(--c-ink);
-}
-.result-actions button.primary:hover {
-  border-color: var(--c-ink);
-  color: var(--c-ink);
-  box-shadow: 0 0 24px rgba(255,255,255,0.18);
-}
-
-/* ─────────────────────────────
-   Animations
-   ───────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ─────────────────────────────
-   Popup mode (re-uses #setup-panel as a modal during battle)
-   - #popup-toggle (⚙) lives top-left, visible during battle phases
-   - clicking it adds .popup-open to <body>
-   - .popup-open shows #popup-backdrop and forces #setup-panel back into view
-   - close: × button, click outside the panel, or ESC (handled in ui.js)
-   ───────────────────────────── */
-
-#popup-toggle {
-  position: fixed;
-  top: 18px;
-  left: 18px;
-  z-index: 15;
-  display: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 9999px;
-  background: rgba(10, 10, 18, 0.55);
-  border: 1px solid var(--c-hairline);
-  color: var(--c-ink);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  backdrop-filter: blur(6px);
-}
-#popup-toggle:hover {
-  border-color: var(--c-ink);
-}
-
-/* Show ⚙ only during phases where the setup panel is hidden. */
-body[data-phase="intro"]     #popup-toggle,
-body[data-phase="countdown"] #popup-toggle,
-body[data-phase="battle"]    #popup-toggle {
+.setup-card {
+  position: relative;
+  width: 100%;
+  max-width: 660px;
+  background: var(--c-card);
+  border: none;
+  border-radius: 18px;
+  padding: 40px 44px 36px;
   display: flex;
+  flex-direction: column;
+  gap: 28px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-/* Hide ⚙ once the popup is actually open — the close button takes over. */
-body.popup-open #popup-toggle { display: none; }
-
-#popup-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 11;
-  /* Solid dim — popup feels like a dedicated input mode, not an overlay.
-     The arena behind is fully obscured so attention stays on the card. */
-  background: rgba(0, 0, 0, 0.85);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-body.popup-open #popup-backdrop {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* When popup is open, force the setup card back into view above the
-   backdrop, regardless of phase-driven hide rules. The panel itself never
-   hides anymore (it's a positioning container), so we only need to reach
-   into the card and the embedded participants list. */
-body.popup-open #setup-panel {
-  z-index: 12;
-}
-body.popup-open .setup-card {
-  opacity: 1 !important;
-  transform: none !important;
-  pointer-events: auto;
-}
-
-/* Popup-mode card: fixed width, generous padding, near-opaque fill.
-   This re-styles the same .setup-card that's used in idle mode but with
-   stricter modal proportions. The brand block and sound toggle are hidden
-   below; the participants list stays visible (FLIPped back into the panel)
-   so the roster is editable mid-battle with the names in view. */
-body.popup-open .setup-card {
-  width: 700px;                            /* fit the embedded roster (≤588px) */
-  max-width: calc(100vw - 32px);
-  padding: 48px 44px;
-  gap: 24px;
-  background: var(--c-surface);            /* near-solid #0d0d0d */
-  border: 1px solid var(--c-hairline-hi);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
-}
-
-/* Popup mode: hide non-essentials so structure becomes title → input → list → action.
-   The participants list stays visible (it's the whole point of the popup —
-   editing the roster mid-battle), only brand/sound chrome gets stripped. */
-body.popup-open .setup-brand,
-body.popup-open #sound-toggle {
-  display: none;
-}
-
-/* The × close button — only meaningful in popup mode. Anchored to the card,
-   not the viewport, so it visually belongs to the popup. */
-.setup-card { position: relative; }
+/* Close button — only visible in popup (during-battle edit) mode */
 #popup-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
   width: 32px;
   height: 32px;
   border-radius: 9999px;
   background: transparent;
-  border: 1px solid var(--c-hairline-hi);
+  border: 1px solid var(--c-hairline);
   color: var(--c-muted);
   font-size: 18px;
   line-height: 1;
@@ -790,20 +248,767 @@ body.popup-open #sound-toggle {
 }
 body.popup-open #popup-close { display: flex; }
 
-/* ─────────────────────────────
-   Phase-driven UI mode
-   <body data-phase="idle|intro|countdown|battle|result">
-   - idle    : setup card visible (with .roster-card embedded); .roster-corner hidden
-   - intro/countdown/battle/result : setup card fades out (taking .roster-card
-                                     with it); .roster-corner cross-fades in
-   - popup-open (during battle) : reverses to idle layout — card + embedded
-                                  roster come back, corner roster fades out
-   The card and its embedded roster share opacity (the roster inherits the
-   card's opacity), so a single transition on .setup-card animates both.
-   ───────────────────────────── */
+/* ── Field block (TITLE / PARTICIPANTS) ── */
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-/* Hide the setup card during in-game / post-game phases. Children
-   (including the embedded roster) inherit opacity 0. */
+/* TITLE / PARTICIPANTS section labels — round-4 spec:
+   Space Grotesk · 20px · letter-spacing 1.5px · 80% opacity. */
+.field-label {
+  font-family: var(--f-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.field-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Red count badge next to PARTICIPANTS title — exact spec:
+   border #DD0000 100%, fill #FF1500 60%, radius 5px (round-2 feedback).
+   The number sits at the optical centre of the box (round-3: tighten
+   centring): explicit line-height + symmetric padding + box-sizing on the
+   border so the 1px outline doesn't push content off-axis. */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  background: rgba(255, 21, 0, 0.6);
+  border: 1px solid #DD0000;
+  color: #fff;
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ── TITLE input (bottom-border, uppercase) ──
+   Round-3/4: input content sits one step below the label hierarchy —
+   16px, Hanken Grotesk, with the underline kept tight to the text. */
+#event-title {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  color: var(--c-ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 0 6px;
+  outline: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+#event-title::placeholder {
+  color: rgba(255,255,255,0.30);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+#event-title:focus {
+  border-bottom-color: rgba(255,255,255,0.45);
+}
+#event-title.warn,
+#event-title.warn::placeholder {
+  color: var(--c-accent-red);
+  border-bottom-color: rgba(230,57,70,0.55);
+}
+
+/* ── Participant Name input row (bottom-border + circle [+]) ── */
+.name-input-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  padding-bottom: 4px;
+}
+.name-input-row:focus-within {
+  border-bottom-color: rgba(255,255,255,0.45);
+}
+#name-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--c-ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  font-weight: 400;
+  padding: 4px 0;
+  outline: none;
+}
+#name-input::placeholder {
+  color: rgba(255,255,255,0.30);
+}
+
+#add-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.92);
+  border: none;
+  color: #000;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+#add-btn:hover:not(:disabled) {
+  background: #fff;
+}
+#add-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+#add-btn:disabled {
+  background: rgba(255,255,255,0.25);
+  color: rgba(0,0,0,0.5);
+  cursor: not-allowed;
+}
+
+/* ── Action buttons row (CSV UPLOAD, SHUFFLE) ── */
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Pill buttons — exact box specs per round-2 feedback:
+   CSV  : border #9D9D9D, fill #3B3B3B, radius 5px
+   SHUFFLE: border #9D9D9D, fill #666666, radius 5px */
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  height: 30px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid #9D9D9D;
+  border-radius: 5px;
+  color: rgba(255,255,255,0.85);
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.pill-btn-csv     { background: #3B3B3B; }
+.pill-btn-shuffle { background: #666666; }
+.pill-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+  color: var(--c-ink);
+}
+.pill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pill-btn .btn-icon {
+  flex-shrink: 0;
+  margin-right: -2px;
+}
+
+.help-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.45);
+  font-family: var(--f-body);
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  cursor: help;
+}
+.help-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(20,20,22,0.98);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+  text-transform: none;
+  color: rgba(255,255,255,0.85);
+  width: max-content;
+  max-width: 240px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.help-icon:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#csv-input { display: none; }
+
+/* ─────────────────────────────────────────────
+   Participants Roster
+   .roster-card : embedded in setup card (idle / popup-open)
+   .roster-corner : fixed bottom-right HUD (battle phases)
+   ───────────────────────────────────────────── */
+.roster-block {
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+/* Card-embedded roster: 2-column grid (PC) / responsive on mobile.
+   PER_COL = 10 (set in JS): items 1-10 in left column, 11-20 in next column. */
+.roster-card {
+  margin-top: 8px;
+  width: 100%;
+}
+.roster-card .participants-wrap {
+  width: 100%;
+}
+.roster-card .participants {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  width: 100%;
+  align-items: flex-start;
+}
+/* Each column has a bounded width so the trailing × stays close to the name
+   regardless of total participant count. With ≤10 participants only one column
+   renders, but it still occupies the same width as a single column would in
+   the multi-column layout (matches reference INPUT_PC.jpg spacing). */
+.roster-card .participants-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 260px;
+}
+
+/* Round-4: participant rows — Hanken Grotesk · 11px · letter-spacing 0.55px. */
+.roster-card .participant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 300;                    /* Light per round-3 */
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.78);
+  animation: fadeIn 0.25s ease;
+  transition: opacity 0.3s ease;
+}
+.roster-card .participant .rank-tag { display: none; }
+.roster-card .participant .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+/* Name hugs its content (no flex:1) so the × sits flush after the text,
+   not at the far right of the column. Reference INPUT_MO.jpg shows × tight
+   against the name. */
+.roster-card .participant .name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 36px);        /* leave room for dot + gap + × */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roster-card .participant .remove {
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;                    /* tight to the name */
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.40);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, opacity 0.15s;
+}
+.roster-card .participant:hover .remove { opacity: 1; }
+.roster-card .participant .remove:hover { color: rgba(230,57,70,0.85); }
+
+.roster-card .participant.eliminated { opacity: 0.45; }
+.roster-card .participant.eliminated .dot { opacity: 0.4; box-shadow: none; }
+
+/* ── Corner (in-battle) HUD copy of the roster ──
+   Reference REDESIGN_0510 §1-3: stack ALL participants in a single column on
+   the right side, regardless of count. The PARTICIPANTS label width follows
+   the column width via flex space-between. */
+.roster-corner {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  z-index: 6;
+  width: 200px;
+  max-width: 80vw;
+  max-height: calc(100vh - 80px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.roster-corner .remove { display: none; }
+.roster-corner .participants-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* Flatten the JS-emitted multi-column structure (.participants-column) into
+   a single vertical stack — each column wrapper becomes layout-transparent. */
+.roster-corner .participants {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.roster-corner .participants-column {
+  display: contents;
+}
+.roster-corner .participant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+  height: 24px;
+  font-family: var(--f-body);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.70);
+}
+.roster-corner .participant .rank-tag {
+  width: 28px;
+  color: rgba(255,255,255,0.40);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: lowercase;
+  flex-shrink: 0;
+}
+.roster-corner .participant:not(.eliminated) .rank-tag { visibility: hidden; }
+.roster-corner .participant.eliminated { opacity: 0.55; }
+.roster-corner .participant.eliminated .name { color: rgba(255,255,255,0.45); }
+.roster-corner .participant.eliminated .dot { opacity: 0.35; box-shadow: none; }
+.roster-corner .participant .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+.roster-corner .participant .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-corner .col-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--f-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  margin-top: 8px;
+}
+.roster-card .col-label { display: none; }
+
+/* ─────────────────────────────────────────────
+   START GAME (primary CTA)
+   ───────────────────────────────────────────── */
+.primary-btn {
+  width: 100%;
+  height: 56px;
+  background: var(--c-ink);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--f-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.1s ease, opacity 0.2s ease;
+}
+.primary-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.92);
+}
+.primary-btn:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────
+   HUD — Title / Status / Timer / Countdown
+   ───────────────────────────────────────────── */
+#title-hud {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 0 24px rgba(0,0,0,0.6);
+  white-space: nowrap;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+body[data-phase="intro"]     #title-hud,
+body[data-phase="countdown"] #title-hud,
+body[data-phase="battle"]    #title-hud,
+body[data-phase="result"]    #title-hud { opacity: 1; }
+body.popup-open #title-hud { opacity: 0; }
+#title-hud:empty { opacity: 0 !important; }
+
+/* Round-3 feedback: "N REMAINING" moves from bottom-center to the top HUD
+   stack (under the title-hud, above the timer). */
+#status-bar {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-body);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  text-shadow: 0 0 18px rgba(0,0,0,0.6);
+  z-index: 5;
+  pointer-events: none;
+}
+
+#timer-display {
+  position: absolute;
+  top: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-body);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.55);
+  z-index: 5;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.5s;
+}
+#timer-display.urgent { color: rgba(230, 57, 70, 0.9); }
+
+#countdown {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--f-display);
+  font-size: 140px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 60px rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.2s ease-out, opacity 0.3s;
+}
+
+/* ─────────────────────────────────────────────
+   Result Overlay (RESULT.jpg)
+   3D box → WINNER red badge → winner name → list card → action buttons
+   ───────────────────────────────────────────── */
+#result-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  padding: 60px 24px 40px;
+}
+#result-overlay.show {
+  display: flex;
+  animation: fadeIn 0.5s ease;
+}
+
+.result-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+#result-3d {
+  width: 240px;
+  height: 240px;
+  background: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+#result-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.result-winner-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin-top: -14px;   /* WINNER badge overlaps slightly with the 3D box */
+}
+
+/* WINNER badge — same spec as the count badge (round-2 feedback):
+   border #DD0000 100%, fill #FF1500 60%, radius 5px. */
+#result-title {
+  background: rgba(255, 21, 0, 0.6);
+  border: 1px solid #DD0000;
+  color: #fff;
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 4px 14px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 2;
+}
+
+#result-winner-name {
+  margin-top: 6px;
+  background: rgba(255,255,255,0.05);
+  font-family: var(--f-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--c-ink);
+  letter-spacing: 0.5px;
+  padding: 4px 24px 10px;
+  border-radius: 6px;
+  text-align: center;
+  max-width: min(80vw, 480px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: fadeIn 0.6s ease backwards;
+  animation-delay: 0.2s;
+}
+
+#result-list {
+  margin-top: 18px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 14px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+#result-list:empty { display: none; }
+
+#result-list .result-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--f-body);
+  font-size: 14px;
+  color: rgba(255,255,255,0.85);
+  padding: 4px 4px;
+  font-variant-numeric: tabular-nums;
+  animation: fadeIn 0.4s ease backwards;
+}
+#result-list .result-rank {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.50);
+  min-width: 28px;
+  text-align: right;
+  letter-spacing: 0.4px;
+}
+#result-list .result-name {
+  font-weight: 600;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.5px;
+}
+
+.result-actions {
+  margin-top: 28px;
+  display: flex;
+  gap: 14px;
+}
+/* Result actions — match the input-page pill spec (round-2 feedback):
+   border #9D9D9D, radius 5px. COPY RESULTS = #3B3B3B fill (CSV-style),
+   PLAY AGAIN = #666666 fill (SHUFFLE-style) per RESULT.jpg contrast. */
+.pill-btn-result {
+  height: 38px;
+  padding: 8px 22px;
+  border: 1px solid #9D9D9D;
+  border-radius: 5px;
+  color: rgba(255,255,255,0.92);
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.18s ease, color 0.18s ease;
+}
+#btn-copy.pill-btn-result  { background: #3B3B3B; }
+#btn-retry.pill-btn-result { background: #666666; }
+.pill-btn-result:hover {
+  filter: brightness(1.15);
+  color: var(--c-ink);
+}
+
+/* ─────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────────────────────
+   Popup mode (re-uses #setup-panel as a modal during battle)
+   ───────────────────────────────────────────── */
+#popup-toggle {
+  position: fixed;
+  top: 28px;
+  left: 36px;
+  z-index: 15;
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--c-ink);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+#popup-toggle:hover {
+  border-color: var(--c-ink);
+}
+
+/* Show ⚙ only during phases where the setup panel is hidden. The brand block
+   keeps the same top-left slot, so we hide the brand block while ⚙ is shown
+   to avoid stacking. */
+body[data-phase="intro"]     #popup-toggle,
+body[data-phase="countdown"] #popup-toggle,
+body[data-phase="battle"]    #popup-toggle {
+  display: flex;
+}
+body[data-phase="intro"]     .brand-block,
+body[data-phase="countdown"] .brand-block,
+body[data-phase="battle"]    .brand-block {
+  opacity: 0;
+}
+body.popup-open #popup-toggle { display: none; }
+body.popup-open .brand-block  { opacity: 0; }
+
+#popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+body.popup-open #popup-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.popup-open #setup-panel { z-index: 12; }
+body.popup-open .setup-card {
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: auto;
+}
+
+/* ─────────────────────────────────────────────
+   Phase-driven UI mode — fade card out for in-game phases,
+   fade corner roster in. Mirror of state.js setPhase().
+   ───────────────────────────────────────────── */
 body[data-phase="intro"]     .setup-card,
 body[data-phase="countdown"] .setup-card,
 body[data-phase="battle"]    .setup-card,
@@ -813,12 +1018,10 @@ body[data-phase="result"]    .setup-card {
   pointer-events: none;
 }
 
-/* Cross-fade companion: corner roster fades in. Quieter during the live
-   battle phases (0.6) since it's a glance HUD, not the focus. */
 body[data-phase="intro"]     .roster-corner,
 body[data-phase="countdown"] .roster-corner,
 body[data-phase="battle"]    .roster-corner {
-  opacity: 0.6;
+  opacity: 0.65;
   pointer-events: auto;
 }
 body[data-phase="intro"]     .roster-corner:hover,
@@ -827,125 +1030,136 @@ body[data-phase="battle"]    .roster-corner:hover {
   opacity: 1;
 }
 body[data-phase="result"] .roster-corner {
-  opacity: 1;                    /* result overlay covers it anyway */
-  pointer-events: auto;
+  opacity: 0;     /* result overlay covers everything */
+  pointer-events: none;
 }
 
-/* Popup re-opens during battle → flip back to the idle visual: corner
-   roster fades out, card (with embedded roster) fades back in. The card
-   is forced visible by the popup-open !important rule earlier; here we
-   only need to suppress the corner copy so they don't both show. */
 body.popup-open .roster-corner {
   opacity: 0;
   pointer-events: none;
 }
 
-/* ─────────────────────────────
-   Mobile / Responsive
-   ───────────────────────────── */
-
-/* iOS: prevent input zoom when font-size < 16px */
-@media (max-width: 1023px) {
-  #name-input,
-  .setup-title #event-title {
-    font-size: 16px;
-  }
+/* Show brand block during result phase so it appears above the result overlay
+   (matches RESULT.jpg). We bumped the brand block's z-index above the overlay
+   for this. */
+body[data-phase="result"] .brand-block {
+  opacity: 1;
+  z-index: 21;
 }
 
-/* Tablet */
+/* ─────────────────────────────────────────────
+   Responsive — Tablet
+   ───────────────────────────────────────────── */
 @media (max-width: 1023px) and (min-width: 768px) {
-  #setup-panel { padding: 32px 20px; }
-  .setup-card { gap: 22px; padding: 32px 28px; max-width: 520px; }
-  .setup-tagline { max-width: 360px; font-size: 9.5px; letter-spacing: 1.8px; }
-  .setup-title #event-title { font-size: 22px; letter-spacing: 1.5px; }
-
-  /* Tablet corner offset — pull the HUD a touch closer to the edge. */
-  .roster-corner {
-    right: 16px;
-    bottom: 16px;
-  }
+  .brand-block { top: 22px; left: 26px; }
+  .brand-icon { height: 28px; }
+  .brand-tagline { font-size: 9px; padding-left: 10px; }
+  #sound-toggle { top: 22px; right: 26px; }
+  .setup-card { max-width: 540px; padding: 36px 36px 32px; gap: 24px; }
 }
 
-/* Mobile */
+/* ─────────────────────────────────────────────
+   Responsive — Mobile (INPUT_MO.jpg)
+   Brand block at top, mute top-right, card fills width below.
+   ───────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* Card sits at top, embedded roster scrolls horizontally inside it.
-     Setup panel scrolls vertically so a tall card doesn't get clipped. */
+  /* Prevent iOS input zoom (font ≥ 16px) */
+  #name-input,
+  #event-title { font-size: 16px; }
+
+  .brand-block {
+    top: 22px;
+    left: 22px;
+  }
+  .brand-tagline {
+    font-size: 8.5px;
+    letter-spacing: 0.7px;
+    line-height: 1.5;
+    padding-left: 9px;         /* aligns with the B of BLITZ at this scale */
+    white-space: nowrap;       /* keep strict 2-line layout per reference */
+  }
+  .brand-icon { height: 26px; width: auto; }
+
+  #sound-toggle {
+    top: 22px;
+    right: 22px;
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Setup panel scrolls vertically; the card sits below the brand chrome */
   #setup-panel {
-    padding: 24px 16px;
-    padding-top: 6vh;
-    justify-content: flex-start;
+    padding: 0 16px 24px;
+    padding-top: 130px;
+    align-items: flex-start;
     overflow-y: auto;
-    gap: 20px;
   }
   .setup-card {
-    gap: 18px;
-    padding: 24px 18px;
     max-width: 100%;
-    width: 100%;
+    padding: 28px 24px 24px;
+    gap: 22px;
+    border-radius: 16px;
   }
-  #logo { height: 64px; min-height: 56px; max-height: 80px; }
-  .setup-tagline { max-width: 280px; font-size: 9px; letter-spacing: 1.6px; }
-  .setup-title #event-title {
+
+  .field-label { font-size: 14px; }
+  #event-title {
     font-size: 18px;
-    letter-spacing: 1.5px;
-    text-align: left;
-  }
-  .setup-controls { justify-content: flex-start; gap: 6px; }
-  #name-input { width: 100%; max-width: 240px; }
-
-  /* Roster blocks: horizontal scroll inside the wrap if columns exceed width. */
-  .roster-block .participants-wrap {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-    width: 100%;
-  }
-  .roster-block .participants { max-height: 30vh; min-width: unset; }
-
-  /* Pre-allocate column height only when the corner roster is the active
-     surface, so the HUD doesn't jitter on eliminations. Idle/popup keeps
-     min-height: 0 (hug content). */
-  .roster-corner .participants-column {
-    min-height: calc(8 * 26px);
+    letter-spacing: 1px;
+    padding-bottom: 10px;
   }
 
-  .participant { width: 150px; }
-  .participant .remove { opacity: 0.5; }   /* always visible on touch */
+  .roster-card .participants { gap: 16px; }
+  .roster-card .participant {
+    font-size: 11px;
+    height: 22px;
+    letter-spacing: 0.55px;
+  }
+  .roster-card .participant .remove { opacity: 0.5; } /* always visible on touch */
 
+  .primary-btn {
+    height: 50px;
+    font-size: 14px;
+    letter-spacing: 3px;
+    border-radius: 10px;
+  }
+
+  /* HUD adjustments */
   #countdown { font-size: 84px; }
   #title-hud { top: 18px; font-size: 13px; letter-spacing: 3px; }
-  #timer-display { top: 56px; font-size: 20px; }   /* below title-hud */
+  #status-bar { top: 40px; font-size: 10px; letter-spacing: 1.5px; }
+  #timer-display { top: 64px; font-size: 18px; }
 
-  /* Corner roster on mobile: full-bleed bottom strip during battle/result. */
+  /* Corner roster on mobile — narrow single column anchored to the right */
   .roster-corner {
     right: 12px;
-    left: 12px;
+    left: auto;
     bottom: 12px;
-    min-width: 0;
-    max-width: none;
+    width: 160px;
+    max-height: calc(100vh - 60px);
   }
-
-  /* During live battle on mobile, dim the strip aggressively so it reads
-     as a glance HUD; touch/focus restores full visibility. */
-  body[data-phase="battle"]:not(.popup-open) .roster-corner {
-    opacity: 0.35;
+  .roster-corner .participants-wrap {
+    max-height: calc(100vh - 100px);
   }
+  body[data-phase="battle"]:not(.popup-open) .roster-corner { opacity: 0.5; }
   body[data-phase="battle"]:not(.popup-open) .roster-corner:active,
-  body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within {
-    opacity: 1;
-  }
+  body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within { opacity: 1; }
+
+  /* Result overlay: tighter spacing on mobile */
+  #result-3d { width: 200px; height: 200px; }
+  #result-winner-name { font-size: 28px; padding: 4px 18px 8px; }
+  #result-list { padding: 12px 22px; min-width: 160px; }
+  .result-actions button { padding: 8px 18px; font-size: 11px; }
+
+  #popup-toggle { top: 22px; left: 22px; width: 34px; height: 34px; }
 }
 
-/* Mobile landscape: even less vertical room — push HUD up, shrink countdown */
+/* Mobile landscape — squeeze HUD vertically */
 @media (max-width: 767px) and (orientation: landscape) {
-  #setup-panel { padding-top: 4vh; }
-  .setup-card { gap: 12px; padding: 16px 18px; }
-  #logo { height: 48px; min-height: 40px; }
-  .setup-tagline { display: none; }
+  #setup-panel { padding-top: 80px; }
+  .brand-tagline { display: none; }
   #countdown { font-size: 56px; }
-  #title-hud { top: 10px; font-size: 11px; letter-spacing: 2.5px; }
-  #timer-display { top: 38px; font-size: 16px; }
+  #title-hud { top: 8px; font-size: 11px; letter-spacing: 2.5px; }
+  #status-bar { top: 26px; font-size: 9.5px; }
+  #timer-display { top: 44px; font-size: 16px; }
   .roster-corner { bottom: 8px; }
-  .roster-corner .participants-column { min-height: calc(5 * 26px); }
 }
