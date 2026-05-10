@@ -776,6 +776,54 @@ body.popup-open #title-hud { opacity: 0; }
   transition: transform 0.2s ease-out, opacity 0.3s;
 }
 
+/* Pause indicator — centered overlay during in-battle pause. Pure visual;
+   pause toggling lives on the renderer canvas, so the indicator stays
+   pointer-events: none. */
+#pause-indicator {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.94);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 6;
+  user-select: none;
+}
+#pause-indicator.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+#pause-indicator .pause-bars {
+  display: flex;
+  gap: 10px;
+}
+#pause-indicator .pause-bars span {
+  width: 14px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 2px;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
+}
+#pause-indicator .pause-label {
+  font-family: var(--f-display);
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
+}
+#pause-indicator .pause-hint {
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* ─────────────────────────────────────────────
    Result Overlay (RESULT.jpg)
    3D box → WINNER red badge → winner name → list card → action buttons

@@ -3,6 +3,7 @@ import { cryptoRandom } from './config.js';
 
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
+let audioUnlocked = false;
 
 export function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
@@ -70,17 +71,47 @@ export function playVictory() {
 let edmPlaying = false;
 let edmNodes = [];
 let edmInterval = null;
+let edmMaster = null;
+let edmTargetVolume = 0.06;
+let edmMode = 'idle';
+const EDM_VOLUME = { idle: 0.06, battle: 0.16 };
 
-export function startEDM() {
-  if (!state.soundEnabled || edmPlaying) return;
+// Smooth ramp the EDM bus gain — used to dim BGM on the result screen
+// without stopping/restarting the loop, then restore on reset.
+export function setEDMVolume(vol, rampSeconds = 0.4) {
+  edmTargetVolume = vol;
+  if (!edmMaster || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  edmMaster.gain.cancelScheduledValues(now);
+  edmMaster.gain.setValueAtTime(edmMaster.gain.value, now);
+  edmMaster.gain.linearRampToValueAtTime(vol, now + rampSeconds);
+}
+
+export function setEDMMode(mode) {
+  edmMode = mode === 'battle' ? 'battle' : 'idle';
+  edmTargetVolume = EDM_VOLUME[edmMode];
+  if (edmPlaying) {
+    setEDMVolume(edmTargetVolume, 0.4);
+  }
+}
+
+export function startEDM(mode = 'idle') {
+  edmMode = mode === 'battle' ? 'battle' : 'idle';
+  edmTargetVolume = EDM_VOLUME[edmMode];
+  if (!state.soundEnabled) return;
+  if (edmPlaying) {
+    setEDMMode(edmMode);
+    return;
+  }
   ensureAudio();
   edmPlaying = true;
   const bpm = 140;
   const beatLen = 60 / bpm;
 
   const master = audioCtx.createGain();
-  master.gain.value = 0.12;
+  master.gain.value = edmTargetVolume;
   master.connect(audioCtx.destination);
+  edmMaster = master;
 
   function scheduleKick(time) {
     const osc = audioCtx.createOscillator();
@@ -88,7 +119,7 @@ export function startEDM() {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(150, time);
     osc.frequency.exponentialRampToValueAtTime(30, time + 0.12);
-    g.gain.setValueAtTime(0.7, time);
+    g.gain.setValueAtTime(edmMode === 'battle' ? 0.75 : 0.45, time);
     g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
     osc.connect(g).connect(master);
     osc.start(time);
@@ -107,7 +138,8 @@ export function startEDM() {
     hp.type = 'highpass';
     hp.frequency.value = 8000;
     const g = audioCtx.createGain();
-    g.gain.value = open ? 0.15 : 0.1;
+    if (open) g.gain.value = edmMode === 'battle' ? 0.16 : 0.1;
+    else g.gain.value = edmMode === 'battle' ? 0.11 : 0.08;
     src.connect(hp).connect(g).connect(master);
     src.start(time);
     edmNodes.push(src);
@@ -122,7 +154,7 @@ export function startEDM() {
     lp.type = 'lowpass';
     lp.frequency.setValueAtTime(800, time);
     lp.frequency.exponentialRampToValueAtTime(200, time + dur);
-    g.gain.setValueAtTime(0.3, time);
+    g.gain.setValueAtTime(edmMode === 'battle' ? 0.28 : 0.16, time);
     g.gain.exponentialRampToValueAtTime(0.001, time + dur);
     osc.connect(lp).connect(g).connect(master);
     osc.start(time);
@@ -138,7 +170,7 @@ export function startEDM() {
     const lp = audioCtx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = 3000;
-    g.gain.setValueAtTime(0.08, time);
+    g.gain.setValueAtTime(edmMode === 'battle' ? 0.1 : 0.05, time);
     g.gain.exponentialRampToValueAtTime(0.001, time + dur);
     osc.connect(lp).connect(g).connect(master);
     osc.start(time);
@@ -172,6 +204,31 @@ export function startEDM() {
   edmNodes.push(master);
 }
 
+export function playWhoosh() {
+  if (!state.soundEnabled) return;
+  ensureAudio();
+  const duration = 0.18;
+  const bufSize = Math.floor(audioCtx.sampleRate * duration);
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    const t = i / bufSize;
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2);
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+  filter.Q.value = 0.9;
+  filter.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + duration);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  src.connect(filter).connect(gain).connect(audioCtx.destination);
+  src.start();
+}
+
 export function stopEDM() {
   edmPlaying = false;
   if (edmInterval) { clearInterval(edmInterval); edmInterval = null; }
@@ -179,6 +236,7 @@ export function stopEDM() {
     try { if (n.stop) n.stop(); if (n.disconnect) n.disconnect(); } catch { /* noop */ }
   });
   edmNodes = [];
+  edmMaster = null;
 }
 
 // ── Spin hum ──
@@ -213,4 +271,15 @@ export function stopSpinHum() {
     spinOsc = null;
   }
   spinGain = null;
+}
+
+export function unlockAudio() {
+  if (audioUnlocked) return;
+
+  ensureAudio();
+
+  audioUnlocked = true;
+
+  window.removeEventListener('pointerdown', unlockAudio);
+  window.removeEventListener('keydown', unlockAudio);
 }

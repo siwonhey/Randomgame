@@ -50,7 +50,7 @@ Events.on(engine, 'collisionStart', (event) => {
      ? 1 + Math.min((state.battleElapsed - 3) / 5, 1) * 2.0
      : 1;
 
-    const force = intensity * 0.018 * baseFactor * aggressionBoost * earlyCurb;
+    const force = intensity * 0.015 * baseFactor * aggressionBoost * earlyCurb;
 
     // Apply along collision normal so the tuning above actually affects bounce.
     const fx = (nx / dist) * force;
@@ -60,8 +60,26 @@ Events.on(engine, 'collisionStart', (event) => {
   }
 });
 
+let pauseStartTime = 0;
+
+// Pause/resume freeze the Matter.js step and shift the battle clock so
+// state.battleElapsed (driven by performance.now() − battleStartTime) picks
+// up exactly where it left off when resumed.
+export function pausePhysics() {
+  if (state.paused) return;
+  state.paused = true;
+  pauseStartTime = performance.now();
+}
+
+export function resumePhysics() {
+  if (!state.paused) return;
+  state.battleStartTime += performance.now() - pauseStartTime;
+  state.paused = false;
+}
+
 export function physicsTick() {
   if (state.phase !== 'battle') return 0;
+  if (state.paused) return 0;
   Engine.update(engine, 1000 / 60);
 
   state.battleElapsed = (performance.now() - state.battleStartTime) / 1000;
@@ -69,14 +87,17 @@ export function physicsTick() {
 
   const tops = getTops();
 
-  // Force eliminate furthest when time runs out
   if (remaining <= 0) {
     const active = tops.filter(t => !t.eliminated);
     if (active.length > 1) {
-      let furthest = null, maxDist = -1;
+      let furthest = active[0];
+      let maxDist2 = furthest.body.position.x ** 2 + furthest.body.position.y ** 2;
       for (const top of active) {
-        const d = Math.sqrt(top.body.position.x ** 2 + top.body.position.y ** 2);
-        if (d > maxDist) { maxDist = d; furthest = top; }
+        const d2 = top.body.position.x ** 2 + top.body.position.y ** 2;
+        if (d2 > maxDist2) {
+          maxDist2 = d2;
+          furthest = top;
+        }
       }
       if (furthest) onEliminate(furthest);
     }
@@ -85,83 +106,100 @@ export function physicsTick() {
   const active = tops.filter(t => !t.eliminated);
   const timeRatio = Math.min(state.battleElapsed / BATTLE_TIME_LIMIT, 1);
   let avgSpeed = 0;
+  const shouldSeek = state.battleElapsed > 3 && active.length > 1;
 
-  active.forEach(top => {
+  for (const top of active) {
     const dx = -top.body.position.x;
     const dy = -top.body.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-    // Central gravity increasing over time
     const distRatio = dist / STADIUM_RADIUS;
-       let safetyNet = 1.0;
-       if (state.battleElapsed < 2 && distRatio > 0.65) {
-           safetyNet = 6.0; // 3초 전에는 밖으로 나갈 때 8배의 힘으로 구조
+
+    let safetyNet = 1;
+
+    if (state.battleElapsed < 2.5) {
+
+      // 가장자리 근처일수록 강하게 복귀
+     const edgeFactor = Math.max(0, distRatio - 0.6);
+
+      safetyNet += edgeFactor * 10;
     }
 
-        // 2. 기본 중력 계산 (기존 로직 유지 + safetyNet 곱하기)
-        const gravForce = (0.0002 + timeRatio * 0.001) * distRatio * safetyNet;
-    
-        Body.applyForce(top.body, top.body.position, {
-          x: (dx / dist) * gravForce,
-          y: (dy / dist) * gravForce,
-        });
+    const gravForce =
+     (0.00018 + timeRatio * 0.0012) *
+      distRatio *
+     safetyNet;
+    Body.applyForce(top.body, top.body.position, {
+      x: (dx / dist) * gravForce,
+      y: (dy / dist) * gravForce,
+    });
 
-    // Seek nearest opponent after 3s
-    if (state.battleElapsed > 3) {
-          let nearest = null, nearestDist = Infinity;
-         for (const other of active) {
-            if (other === top) continue;
-            const odx = other.body.position.x - top.body.position.x;
-            const ody = other.body.position.y - top.body.position.y;
-           const od = Math.sqrt(odx * odx + ody * ody);
-           if (od < nearestDist) { nearestDist = od; nearest = other; }
-         }
+    if (shouldSeek) {
+      let nearest = null;
+      let nearestDist2 = Infinity;
+      for (const other of active) {
+        if (other === top) continue;
+        const odx = other.body.position.x - top.body.position.x;
+        const ody = other.body.position.y - top.body.position.y;
+        const d2 = odx * odx + ody * ody;
+        if (d2 < nearestDist2) {
+          nearestDist2 = d2;
+          nearest = other;
+        }
+      }
 
-         if (nearest) {
-            const seekDx = nearest.body.position.x - top.body.position.x;
-            const seekDy = nearest.body.position.y - top.body.position.y;
-           const seekDist = Math.sqrt(seekDx * seekDx + seekDy * seekDy) || 1;
+      if (nearest) {
+        const predict = active.length === 2 ? 4 : 2;
 
-            // --- [수정 시작: 궤도 깨뜨리기 로직] ---
-            let dirX = seekDx / seekDist;
-            let dirY = seekDy / seekDist;
+        const targetX =
+         nearest.body.position.x +
+          nearest.body.velocity.x * predict;
 
-            // 살아남은 팽이가 딱 2개일 때만 방향을 조금씩 흔듭니다.
-           if (active.length === 2) {
-             // 시간에 따라 출렁이는 값을 더해 직선 궤도를 방해함
-             const wobble = Math.sin(performance.now() * 0.005) * 0.2; 
-             dirX += wobble;
-             dirY += (cryptoRandom() - 0.5) * 0.1;
-           }
-           // --- [수정 끝] ---
+        const targetY =
+         nearest.body.position.y +
+          nearest.body.velocity.y * predict;
 
-            const seekPhase = Math.min((state.battleElapsed - 3) / 25, 1);
-            const seekForce = 0.0003 + seekPhase * 0.0018;
+        const seekDx = targetX - top.body.position.x;
+        const seekDy = targetY - top.body.position.y;
+        const seekDist = Math.sqrt(seekDx * seekDx + seekDy * seekDy) || 1;
+        const seekPhase = Math.min((state.battleElapsed - 3) / 20, 1);
+        let seekForce = 0.00025 + seekPhase * 0.0015;
+        let dirX = seekDx / seekDist;
+        let dirY = seekDy / seekDist;
 
-           Body.applyForce(top.body, top.body.position, {
-             x: dirX * seekForce,
-             y: dirY * seekForce,
-           });
-         }
+        if (active.length === 2) {
+          seekForce *= 1.6;
+          const jitter = (cryptoRandom() - 0.5) * 0.08;
+          const cos = Math.cos(jitter);
+          const sin = Math.sin(jitter);
+          const jitterX = dirX * cos - dirY * sin;
+          const jitterY = dirX * sin + dirY * cos;
+          dirX = jitterX;
+          dirY = jitterY;
         }
 
-    // Stalemate nudges after 5s
-    if (state.battleElapsed > 5 && cryptoRandom() < 0.04) {
-      const nudgeAngle = cryptoRandom() * Math.PI * 2;
-      const nudgeForce = 0.002 * timeRatio;
-      Body.applyForce(top.body, top.body.position, {
-        x: Math.cos(nudgeAngle) * nudgeForce,
-        y: Math.sin(nudgeAngle) * nudgeForce,
-      });
+        if (seekDist < 4) {
+         dirX = seekDx / seekDist;
+         dirY = seekDy / seekDist;
+        }
+
+        Body.applyForce(top.body, top.body.position, {
+          x: dirX * seekForce,
+          y: dirY * seekForce,
+        });
+      }
     }
 
     top.rpm *= top.angularDecay;
     avgSpeed += Math.sqrt(top.body.velocity.x ** 2 + top.body.velocity.y ** 2);
-
-    if (dist > STADIUM_RADIUS * 1.1) {
+if (
+  state.battleElapsed > 1.5 &&
+  active.length > 1 &&
+  dist > STADIUM_RADIUS * 1.1
+)
+     {
       onEliminate(top);
     }
-  });
+  }
 
   return avgSpeed / Math.max(active.length, 1);
 }

@@ -9,7 +9,7 @@ import { physicsTick } from './physics.js';
 import { updateNebulaTexture } from './stadium.js';
 import { updateParticles, spawnTrail } from './particles.js';
 import { updateCinematicCamera, getCamTarget } from './camera.js';
-import { updateSpinHum } from './audio.js';
+import { updateSpinHum, ensureAudio, startEDM } from './audio.js';
 import { initUI, renderParticipants, addParticipant, syncTitleHud } from './ui.js';
 import { loadFromLocalStorage } from './storage.js';
 
@@ -65,8 +65,8 @@ function animate() {
   // Dynamic label Y offset + scale based on camera distance
   // Ensures names stay readable and above the floor at any angle.
   const camDist = camera.position.distanceTo(getCamTarget());
-  const labelY = Math.max(0.85, Math.min(1.7, camDist * 0.10));
-  const labelScale = Math.max(1.0, Math.min(1.7, camDist * 0.11));
+  const labelY = Math.max(0.5, Math.min(1.3, camDist * 0.08));
+  const labelScale = Math.max(1.0, Math.min(1.6, camDist * 0.10));
   tops.forEach(top => {
     if (top.eliminated || !top.label) return;
     top.label.position.y = labelY;
@@ -122,3 +122,18 @@ loadFromLocalStorage(addParticipant);
 syncTitleHud();                          // pick up the loaded event title
 runLandingSplash();
 animate();
+
+// BGM kicks in on the first user gesture (browsers gate AudioContext on
+// interaction). Once the splash dismisses the user is on the input screen,
+// so any click/keypress there triggers BGM and it persists into battle/result.
+function startBGMOnFirstInteraction() {
+  const start = () => {
+    ensureAudio();
+    startEDM('idle');
+    document.removeEventListener('pointerdown', start);
+    document.removeEventListener('keydown', start);
+  };
+  document.addEventListener('pointerdown', start, { once: true });
+  document.addEventListener('keydown', start, { once: true });
+}
+startBGMOnFirstInteraction();

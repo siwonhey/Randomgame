@@ -3,6 +3,7 @@ import { STADIUM_3D_RADIUS } from './config.js';
 import { scene } from './scene.js';
 
 let nebulaCanvas, nebulaCtx, nebulaTex;
+let nebulaRendered = false;
 
 function createNebulaTexture() {
   nebulaCanvas = document.createElement('canvas');
@@ -14,9 +15,14 @@ function createNebulaTexture() {
   return nebulaTex;
 }
 
+// time was already pinned to 0 inside this function, so every frame produced
+// an identical canvas + a 512x512 GPU re-upload. Render once, then no-op —
+// pure overhead removal at no visual cost (helps high-participant frame rate).
 export function updateNebulaTexture(time) {
+  if (nebulaRendered) return;
   time = 0;
   if (!nebulaCtx) return;
+  nebulaRendered = true;
   const ctx = nebulaCtx;
   const w = 512, h = 512;
   ctx.fillStyle = '#0a0a18';

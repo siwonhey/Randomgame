@@ -5,7 +5,12 @@ import { tops, addTopPhysics, removeTopPhysics, repositionTops, clearTops } from
 import {
   startBattle, resetGame,
   setUIUpdateCallback, setInputsLockCallback,
+  pauseBattle, resumeBattle, togglePauseBattle,
 } from './game.js';
+import { renderer } from './scene.js';
+import {
+  startEDM, stopEDM, startSpinHum, stopSpinHum, ensureAudio,
+} from './audio.js';
 import { saveToLocalStorage } from './storage.js';
 
 // Roster is mirrored in two DOM blocks (.roster-card inside the setup card,
@@ -281,6 +286,19 @@ export function initUI() {
     state.soundEnabled = !state.soundEnabled;
     soundBtn.classList.toggle('muted', !state.soundEnabled);
     soundBtn.title = state.soundEnabled ? 'Mute' : 'Unmute';
+
+    if (state.soundEnabled) {
+      ensureAudio();
+      if (state.phase === 'battle') {
+        startEDM('battle');
+        startSpinHum();
+      } else {
+        startEDM('idle');
+      }
+    } else {
+      stopEDM();
+      stopSpinHum();
+    }
   });
 
   document.getElementById('event-title').addEventListener('input', () => {
@@ -300,12 +318,28 @@ export function initUI() {
   const popupBackdrop = document.getElementById('popup-backdrop');
   const setupPanel    = document.getElementById('setup-panel');
 
-  const openPopup  = () => document.body.classList.add('popup-open');
-  const closePopup = () => document.body.classList.remove('popup-open');
+  // Mid-battle: opening the settings popup auto-pauses; closing resumes.
+  // Outside battle (idle/result), the popup is just an editor — no pause logic.
+  const openPopup = () => {
+    document.body.classList.add('popup-open');
+    if (state.phase === 'battle') pauseBattle();
+  };
+  const closePopup = () => {
+    document.body.classList.remove('popup-open');
+    if (state.phase === 'battle') resumeBattle();
+  };
 
   popupToggle.addEventListener('click', openPopup);
   popupClose.addEventListener('click', closePopup);
   popupBackdrop.addEventListener('click', closePopup);
+
+  // Click on the 3D canvas during battle toggles pause. Bound to the renderer
+  // canvas (not #game-area) so HUD elements (timer/status/title) don't trip it.
+  renderer.domElement.addEventListener('click', () => {
+    if (state.phase !== 'battle') return;
+    if (document.body.classList.contains('popup-open')) return;
+    togglePauseBattle();
+  });
 
   // Click outside the panel content while popup is open → close.
   // (Backdrop click already handles edges; this catches gaps inside #setup-panel

@@ -3,13 +3,44 @@
 // ═══════════════════════════════════════════
 import { state, setPhase } from './state.js';
 import { tops, addTopPhysics, repositionTops, clearTops } from './tops.js';
-import { world, registerPhysicsCallbacks } from './physics.js';
+import { world, registerPhysicsCallbacks, pausePhysics, resumePhysics } from './physics.js';
 import { scene, spotLight } from './scene.js';
 import { spawnParticles, clearParticles } from './particles.js';
 import {
-  playBeep, playElimination, playVictory,
-  startSpinHum, stopSpinHum, startEDM, stopEDM, ensureAudio,
+  playBeep, playElimination, playVictory, playWhoosh,
+  startSpinHum, stopSpinHum, startEDM, setEDMVolume, setEDMMode, ensureAudio, unlockAudio,
 } from './audio.js';
+
+
+
+
+// BGM volume profile — input/battle plays at full, result dims for the jingle.
+const BGM_VOL_FULL   = 0.12;
+const BGM_VOL_RESULT = 0.05;
+const BGM_VOL_PAUSE  = 0.03;
+
+const pauseIndicator = document.getElementById('pause-indicator');
+
+export function pauseBattle() {
+  if (state.phase !== 'battle' || state.paused) return;
+  pausePhysics();
+  setEDMVolume(BGM_VOL_PAUSE, 0.25);
+  if (pauseIndicator) pauseIndicator.classList.add('show');
+}
+
+export function resumeBattle() {
+  if (state.phase !== 'battle' || !state.paused) return;
+  resumePhysics();
+  // Restore via mode helper so we pick up whatever battle volume audio.js sets.
+  setEDMMode('battle');
+  if (pauseIndicator) pauseIndicator.classList.remove('show');
+}
+
+export function togglePauseBattle() {
+  if (state.phase !== 'battle') return;
+  if (state.paused) resumeBattle();
+  else pauseBattle();
+}
 import { setMode as setCameraMode, onImpact as cameraImpact } from './camera.js';
 import { showWinner, hideWinner } from './resultScene.js';
 
@@ -23,6 +54,9 @@ const battleBtn = document.getElementById('battle-btn');
 const resultOverlay = document.getElementById('result-overlay');
 const resultList = document.getElementById('result-list');
 const gameArea = document.getElementById('game-area');
+
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
 
 let onUIUpdate = () => {};
 let onInputsLock = () => {};
@@ -91,6 +125,7 @@ export function startBattle() {
 
   repositionTops();
   ensureAudio();
+  playWhoosh();
 
   setCameraMode('intro', { onComplete: startCountdown });
 }
@@ -129,7 +164,7 @@ function launchTops() {
   state.battleStartTime = performance.now();
   setCameraMode('battle');
   startSpinHum();
-  startEDM();
+  startEDM('battle');
 
   const { Body } = Matter;
   tops.forEach(top => {
@@ -150,7 +185,7 @@ function endBattle(winner) {
   setPhase('result');
   state.rankings.unshift(winner);
   stopSpinHum();
-  stopEDM();
+  setEDMVolume(BGM_VOL_RESULT, 0.6);
 
   setCameraMode('result', { winner });
   spotLight.intensity = 2.5;
@@ -205,8 +240,12 @@ export function resetGame() {
   setPhase('idle');
   state.rankings = [];
   state.battleElapsed = 0;
+  state.paused = false;
+  if (pauseIndicator) pauseIndicator.classList.remove('show');
   stopSpinHum();
-  stopEDM();
+  // Keep BGM playing across reset; just bring it back up to full volume.
+  setEDMVolume(BGM_VOL_FULL, 0.4);
+  startEDM('idle');
   spotLight.intensity = 0;
 
   clearTops();

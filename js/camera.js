@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { camera, flashLight } from './scene.js';
 import { INTRO_DURATION } from './config.js';
 
-const TOP_POS       = new THREE.Vector3(0, 25, 0.01);  // straight-down, tiny offset to avoid degenerate lookAt
+const TOP_POS       = new THREE.Vector3(0, 44, 0.01);  // straight-down, pulled further back for a more dramatic descent
 const TOP_TARGET    = new THREE.Vector3(0, 0, 0);      // stadium centered in frame
 const PERSP_POS     = new THREE.Vector3(0, 9, 10);
 const PERSP_TARGET  = new THREE.Vector3(0, 0, 0);
@@ -22,10 +22,10 @@ const INTRO_START_ANGLE  = Math.PI;                    // azimuth at raw=0 (radi
 const INTRO_END_ANGLE    = Math.PI * 2;                // 180° sweep — ends at +z (matches PERSP_POS)
 const INTRO_START_RADIUS = 0.02;
 const INTRO_END_RADIUS   = PERSP_POS.z;                // 10 — must match PERSP_POS for seamless handoff
-const INTRO_START_Y      = TOP_POS.y;                  // 15
+const INTRO_START_Y      = TOP_POS.y;                  // matches TOP_POS for seamless handoff from idle
 const INTRO_END_Y        = PERSP_POS.y;                // 9
-const INTRO_START_FOV    = 62;                         // wide punch at apex
-const INTRO_END_FOV      = 45;                         // settled perspective FOV
+const INTRO_START_FOV    = 90;                         // wider punch at apex (matches the higher start altitude)
+const INTRO_END_FOV      = 42;                         // settled perspective FOV
 const BASE_FOV           = 45;
 
 camera.position.copy(TOP_POS);
@@ -86,7 +86,12 @@ export function updateCinematicCamera(activeTops) {
       // ease-out curve. FOV starts wide and narrows for a dolly-punch feel.
       const elapsed = (performance.now() - introStart) / 1000;
       const raw = Math.min(elapsed / INTRO_DURATION, 1);
-      const tRadial = easeOutCubic(raw);                 // decelerating descent + zoom
+      camera.rotation.z = Math.sin(raw * Math.PI) * 0.08;
+      const tDrop = raw < 0.35
+        ? Math.pow(raw / 0.35, 0.55)
+        : 1;
+
+      const tRadial = easeOutCubic(tDrop);               // decelerating descent + zoom
       const tAngle  = easeInOutCubic(raw);               // smooth orbit, no snap at edges
 
       const angle  = INTRO_START_ANGLE + (INTRO_END_ANGLE - INTRO_START_ANGLE) * tAngle;
@@ -94,7 +99,7 @@ export function updateCinematicCamera(activeTops) {
       const height = INTRO_START_Y + (INTRO_END_Y - INTRO_START_Y) * tRadial;
 
       camera.position.set(Math.sin(angle) * radius, height, Math.cos(angle) * radius);
-      camTarget.copy(PERSP_TARGET);                      // stadium pinned at center
+      camTarget.copy(PERSP_TARGET);                  // stadium pinned at center
 
       const fov = INTRO_START_FOV + (INTRO_END_FOV - INTRO_START_FOV) * easeOutCubic(raw);
       if (Math.abs(camera.fov - fov) > 0.01) {

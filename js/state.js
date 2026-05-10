@@ -8,6 +8,7 @@ export const state = {
   soundEnabled: true,
   battleStartTime: 0,
   battleElapsed: 0,
+  paused: false,
 };
 
 // Mirror state.phase to <body data-phase="..."> so CSS can switch UI mode.

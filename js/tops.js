@@ -9,6 +9,21 @@ const { Bodies, Body, Composite } = Matter;
 
 export const tops = [];
 
+let sharedDiscGeo = null;
+let sharedClawGeo = null;
+let sharedCoreGeo = null;
+let sharedHandleGeo = null;
+let sharedTipGeo = null;
+
+function ensureSharedTopGeometry() {
+  if (sharedDiscGeo) return;
+  sharedDiscGeo = new THREE.CylinderGeometry(DISC_R_BASE, DISC_BOT_R_BASE, DISC_H_BASE, 16);
+  sharedClawGeo = buildClawGeometry(1);
+  sharedCoreGeo = new THREE.SphereGeometry(0.08, 8, 8);
+  sharedHandleGeo = new THREE.CylinderGeometry(0.02, 0.04, 0.35, 8);
+  sharedTipGeo = new THREE.ConeGeometry(0.05, 0.32, 8);
+}
+
 // ── Shared geometry constants ──
 // The disc is the visible base; curved claws protrude tangentially from its
 // outer edge. The Matter.js hitbox radius == the outermost claw-tip reach
@@ -72,6 +87,7 @@ function buildClawGeometry(S) {
 }
 
 export function createTop3D(color, scale = BASE_SCALE) {
+  ensureSharedTopGeometry();
   const group = new THREE.Group();
   const c = new THREE.Color(color);
   const S = scale;
@@ -81,7 +97,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   // a per-frame second-pass scene render. Downgraded to MeshStandardMaterial
   // and bumped emissiveIntensity to keep the neon self-glow.
   const disc = new THREE.Mesh(
-    new THREE.CylinderGeometry(DISC_R_BASE * S, DISC_BOT_R_BASE * S, DISC_H_BASE * S, 32),
+    sharedDiscGeo,
     new THREE.MeshStandardMaterial({
       color: c, transparent: true, opacity: 0.82,
       roughness: 0.15, metalness: 0.2,
@@ -89,7 +105,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
       side: THREE.DoubleSide,
     })
   );
-  const discCenterY = DISC_H_BASE * S;          // disc center height
+  const discCenterY = DISC_H_BASE;          // disc center height (scaled via group)
   disc.position.y = discCenterY;
   group.add(disc);
 
@@ -121,15 +137,15 @@ export function createTop3D(color, scale = BASE_SCALE) {
 
   const decalTex = new THREE.CanvasTexture(decalCanvas);
   const decalMesh = new THREE.Mesh(
-    new THREE.CircleGeometry(0.34 * S, 32),
+    new THREE.CircleGeometry(0.34, 24),
     new THREE.MeshBasicMaterial({ map: decalTex, transparent: true, depthWrite: false, side: THREE.DoubleSide })
   );
   decalMesh.rotation.x = -Math.PI / 2;
-  decalMesh.position.y = discCenterY + (DISC_H_BASE * S) / 2 + 0.001;
+  decalMesh.position.y = discCenterY + (DISC_H_BASE / 2) + 0.001;
   group.add(decalMesh);
 
   // ── Curved claws around the disc's outer edge (all lean same direction) ──
-  const clawGeo = buildClawGeometry(S);
+  const clawGeo = sharedClawGeo;
   const clawMat = new THREE.MeshStandardMaterial({
     color: c, transparent: true, opacity: 0.88,
     roughness: 0.08, metalness: 0.7,
@@ -140,9 +156,9 @@ export function createTop3D(color, scale = BASE_SCALE) {
     const angle = (i / CLAW_COUNT) * Math.PI * 2;
     const claw = new THREE.Mesh(clawGeo, clawMat);
     claw.position.set(
-      Math.cos(angle) * CLAW_ATTACH_R * S,
+      Math.cos(angle) * CLAW_ATTACH_R,
       discCenterY,
-      Math.sin(angle) * CLAW_ATTACH_R * S,
+      Math.sin(angle) * CLAW_ATTACH_R,
     );
     claw.rotation.y = -angle;     // align fin's local +X with radial outward
     group.add(claw);
@@ -150,28 +166,28 @@ export function createTop3D(color, scale = BASE_SCALE) {
 
   // ── Core glow ──
   const core = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08 * S, 16, 16),
+    sharedCoreGeo,
     new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 })
   );
-  core.position.y = discCenterY + 0.02 * S;
+  core.position.y = discCenterY + 0.02;
   group.add(core);
 
   // ── Handle ──
-  const handleHeight = 0.35 * S;
+  const handleHeight = 0.35;
   const handle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.02 * S, 0.04 * S, handleHeight, 8),
+    sharedHandleGeo,
     new THREE.MeshStandardMaterial({
       color: c, transparent: true, opacity: 0.9, roughness: 0.1,
       emissive: c, emissiveIntensity: 0.15,
     })
   );
-  handle.position.y = discCenterY + handleHeight / 2 + 0.1 * S;
+  handle.position.y = discCenterY + handleHeight / 2 + 0.1;
   group.add(handle);
 
   // ── Sharp inverse-cone tip pointing straight down ──
-  const tipH = 0.32 * S;
+  const tipH = 0.32;
   const tip = new THREE.Mesh(
-    new THREE.ConeGeometry(0.05 * S, tipH, 16),
+    sharedTipGeo,
     new THREE.MeshStandardMaterial({
       color: c, transparent: true, opacity: 0.8,
       metalness: 0.85, roughness: 0.15,
@@ -179,8 +195,10 @@ export function createTop3D(color, scale = BASE_SCALE) {
     })
   );
   tip.rotation.x = Math.PI;                                  // apex points down
-  tip.position.y = (discCenterY - (DISC_H_BASE * S) / 2) - tipH / 2 + 0.02 * S;
+  tip.position.y = (discCenterY - (DISC_H_BASE / 2)) - tipH / 2 + 0.02;
   group.add(tip);
+
+  group.scale.setScalar(S);
 
   // Per-top PointLight removed (was 30 lights at 30 tops — major shader cost).
   // Self-glow is preserved entirely through bumped emissive channels above.
@@ -193,7 +211,7 @@ function createLabel(name) {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 72;
   const ctx = canvas.getContext('2d');
-  ctx.font = '600 28px Inter, Pretendard, sans-serif';
+  ctx.font = '600 18px Inter, Pretendard, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.95)';
@@ -206,8 +224,8 @@ function createLabel(name) {
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map: tex, transparent: true, depthTest: false, depthWrite: false,
   }));
-  sprite.scale.set(1.3, 0.37, 1);
-  sprite.position.y = 0.9;
+  sprite.scale.set(0.65, 0.185, 1);
+  sprite.position.y = 0.55;
   sprite.renderOrder = 999;
   return sprite;
 }
