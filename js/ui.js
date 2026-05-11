@@ -32,10 +32,8 @@ function ordinal(n) {
 
 function setInputsDisabled(disabled) {
   nameInput.disabled = disabled;
-  document.getElementById('add-btn').disabled = disabled;
   document.getElementById('event-title').disabled = disabled;
   document.getElementById('shuffle-btn').disabled = disabled;
-  document.getElementById('csv-upload-btn').disabled = disabled;
   document.querySelectorAll('.roster-block .remove').forEach(b => { b.disabled = disabled; });
 }
 
@@ -117,6 +115,11 @@ export function renderParticipants() {
     container.innerHTML = template.innerHTML;
   });
 
+  // Setup card grows as columns are added (1 col → 2 cols → 3 cols).
+  // Drives a CSS attribute selector so styles stay declarative.
+  const setupCard = document.querySelector('.setup-card');
+  if (setupCard) setupCard.dataset.cols = String(colCount);
+
   // Wire remove handlers on every roster instance. The phase guard inside
   // means the corner-roster's remove buttons (visible only via DOM, hidden
   // by CSS) are inert during battle anyway — defensive double-lock.
@@ -185,21 +188,6 @@ function copyResults() {
   });
 }
 
-function handleCSV(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const text = evt.target.result;
-    const names = text.split(/[,\n\r\t]+/)
-      .map(s => s.trim().replace(/^["']|["']$/g, ''))
-      .filter(s => s.length > 0);
-    names.forEach(n => addParticipant(n));
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
 function shuffleParticipants() {
   if (state.phase !== 'idle' || state.participants.length < 2) return;
 
@@ -262,22 +250,12 @@ export function initUI() {
     }, 0);
   });
 
-  document.getElementById('add-btn').addEventListener('click', () => {
-    parseNames(nameInput.value).forEach(n => addParticipant(n));
-    nameInput.value = '';
-  });
-
   battleBtn.addEventListener('click', () => {
     if (!validateTitle()) return;
     startBattle();
   });
   document.getElementById('btn-retry').addEventListener('click', resetGame);
   document.getElementById('btn-copy').addEventListener('click', copyResults);
-
-  document.getElementById('csv-upload-btn').addEventListener('click', () => {
-    document.getElementById('csv-input').click();
-  });
-  document.getElementById('csv-input').addEventListener('change', handleCSV);
 
   document.getElementById('shuffle-btn').addEventListener('click', shuffleParticipants);
 

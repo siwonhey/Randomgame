@@ -17,6 +17,9 @@
     <video id="landing-logo" autoplay muted playsinline preload="auto">
       <source src="LOGO.mp4" type="video/mp4">
     </video>
+    <div id="landing-loading" aria-hidden="true">
+      <span>L</span><span>o</span><span>a</span><span>d</span><span>i</span><span>n</span><span>g</span><span>.</span><span>.</span><span>.</span>
+    </div>
   </div>
 
   <!-- ─── Three.js arena ─── -->
@@ -35,19 +38,10 @@
   <!-- ─── Brand block (fixed top-left, persists from input → game → result) ─── -->
   <header class="brand-block">
     <div class="brand-mark">
-      <img src="LOGO.png" alt="BLITZ" class="brand-icon">
+      <img src="logo.jpg" alt="BLITZ" class="brand-icon">
     </div>
     <p class="brand-tagline">DRIVEN BY PHYSICS — THE EXPERIENCE OF RANDOM<br>SELECTION THROUGH VISUAL COLLISION.</p>
   </header>
-
-  <!-- ─── Sound Toggle (fixed top-right) ─── -->
-  <button id="sound-toggle" title="Toggle Sound" aria-label="Toggle Sound">
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-    </svg>
-  </button>
 
   <!-- ─── Popup mode chrome (gear during battle, backdrop dim) ─── -->
   <div id="popup-backdrop"></div>
@@ -69,18 +63,6 @@
         <div class="field-header">
           <span class="field-label">PARTICIPANTS</span>
           <span class="count-badge count-display">0</span>
-        </div>
-
-        <div class="name-input-row">
-          <input type="text" id="name-input" placeholder="Participant Name" spellcheck="false" autocomplete="off">
-          <button id="add-btn" title="Add" aria-label="Add">+</button>
-        </div>
-
-        <div class="action-buttons">
-          <button id="csv-upload-btn" class="pill-btn pill-btn-csv" type="button">
-            <span>CSV UPLOAD</span>
-            <span class="help-icon" data-tooltip="CSV 파일을 업로드해 참가자를 한 번에 추가합니다. 줄바꿈 또는 쉼표로 이름을 구분하세요.">?</span>
-          </button>
           <button id="shuffle-btn" class="pill-btn pill-btn-shuffle" type="button">
             <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="16 3 21 3 21 8"></polyline>
@@ -90,9 +72,11 @@
               <line x1="4" y1="4" x2="9" y2="9"></line>
             </svg>
             <span>SHUFFLE</span>
-            <span class="help-icon" data-tooltip="참가자 순서와 팽이 색상을 무작위로 다시 배정합니다.">?</span>
           </button>
-          <input type="file" id="csv-input" accept=".csv,.txt,.tsv">
+        </div>
+
+        <div class="name-input-row">
+          <input type="text" id="name-input" placeholder="Participant Name" spellcheck="false" autocomplete="off">
         </div>
 
         <!-- Card-embedded roster -->
@@ -103,8 +87,17 @@
         </aside>
       </div>
 
-      <!-- START GAME -->
-      <button id="battle-btn" class="primary-btn" disabled>START GAME</button>
+      <!-- START GAME row: mute toggle + primary CTA -->
+      <div class="cta-row">
+        <button id="sound-toggle" title="Toggle Sound" aria-label="Toggle Sound">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+        <button id="battle-btn" class="primary-btn" disabled>START GAME</button>
+      </div>
     </div>
   </section>
 

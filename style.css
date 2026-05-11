@@ -81,6 +81,40 @@ html, body {
   background: #000;
 }
 
+/* Loading… text under the landing video — each glyph fades in sequentially,
+   loops while the splash is up. Reference: REDESIGN feedback round-5. */
+#landing-loading {
+  margin-top: 22px;
+  font-family: var(--f-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 6px;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  user-select: none;
+}
+#landing-loading span {
+  display: inline-block;
+  opacity: 0;
+  animation: loadingChar 1.8s ease-in-out infinite;
+}
+#landing-loading span:nth-child(1)  { animation-delay: 0.00s; }
+#landing-loading span:nth-child(2)  { animation-delay: 0.10s; }
+#landing-loading span:nth-child(3)  { animation-delay: 0.20s; }
+#landing-loading span:nth-child(4)  { animation-delay: 0.30s; }
+#landing-loading span:nth-child(5)  { animation-delay: 0.40s; }
+#landing-loading span:nth-child(6)  { animation-delay: 0.50s; }
+#landing-loading span:nth-child(7)  { animation-delay: 0.60s; }
+#landing-loading span:nth-child(8)  { animation-delay: 0.70s; }
+#landing-loading span:nth-child(9)  { animation-delay: 0.80s; }
+#landing-loading span:nth-child(10) { animation-delay: 0.90s; }
+@keyframes loadingChar {
+  0%   { opacity: 0; }
+  25%, 65% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ─────────────────────────────────────────────
    Brand Block (top-left, persists from input → game → result)
    ───────────────────────────────────────────── */
@@ -123,7 +157,6 @@ html, body {
 
 /* Hide brand block while landing splash is active */
 body[data-landing="active"] .brand-block,
-body[data-landing="active"] #sound-toggle,
 body[data-landing="active"] #setup-panel,
 body[data-landing="active"] .roster-corner {
   opacity: 0;
@@ -131,45 +164,53 @@ body[data-landing="active"] .roster-corner {
 }
 
 /* ─────────────────────────────────────────────
-   Sound Toggle (fixed top-right)
+   Sound Toggle — now lives inline at the bottom of the setup card,
+   directly to the left of the START GAME button. Square footprint that
+   matches the CTA height so the two read as a single bar.
    ───────────────────────────────────────────── */
 #sound-toggle {
-  position: fixed;
-  top: 28px;
-  right: 36px;
-  z-index: 15;
-  width: 38px;
-  height: 38px;
-  border-radius: 9999px;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  position: relative;
   overflow: visible;
 }
 #sound-toggle:hover {
   background: rgba(255,255,255,0.12);
   color: #fff;
+  border-color: rgba(255,255,255,0.32);
 }
-/* Muted state: hide the wave lines, draw a diagonal slash through the speaker.
-   Reference INPUT_PC.jpg / INPUT_MO.jpg show the icon as a slashed speaker. */
+/* Muted state: hide the wave lines, draw a diagonal slash through the speaker. */
 #sound-toggle.muted { color: rgba(255,255,255,0.55); }
 #sound-toggle.muted svg path { display: none; }
 #sound-toggle.muted::after {
   content: '';
   position: absolute;
-  width: 22px;
-  height: 1.5px;
+  width: 26px;
+  height: 1.6px;
   background: currentColor;
   border-radius: 2px;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(-30deg);
 }
+
+/* START GAME row: mute button + primary CTA side-by-side. */
+.cta-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.cta-row .primary-btn { flex: 1; }
 
 /* ─────────────────────────────────────────────
    Game Area (full-screen Three.js canvas)
@@ -211,7 +252,7 @@ body[data-landing="active"] .roster-corner {
 .setup-card {
   position: relative;
   width: 100%;
-  max-width: 660px;
+  max-width: 460px;
   background: var(--c-card);
   border: none;
   border-radius: 18px;
@@ -220,8 +261,14 @@ body[data-landing="active"] .roster-corner {
   flex-direction: column;
   gap: 28px;
   box-shadow: 0 24px 80px rgba(0,0,0,0.55);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease, max-width 0.35s ease;
 }
+/* Card grows by one column-step as the roster overflows past 10 / 20.
+   data-cols is written by renderParticipants() in ui.js so width tracks the
+   actual rendered column count. */
+.setup-card[data-cols="1"] { max-width: 460px; }
+.setup-card[data-cols="2"] { max-width: 660px; }
+.setup-card[data-cols="3"] { max-width: 860px; }
 
 /* Close button — only visible in popup (during-battle edit) mode */
 #popup-close {
@@ -272,12 +319,11 @@ body.popup-open #popup-close { display: flex; }
   align-items: center;
   gap: 12px;
 }
+/* SHUFFLE in the PARTICIPANTS header sits on the right, pushed by the count badge. */
+.field-header #shuffle-btn { margin-left: auto; }
 
-/* Red count badge next to PARTICIPANTS title — exact spec:
-   border #DD0000 100%, fill #FF1500 60%, radius 5px (round-2 feedback).
-   The number sits at the optical centre of the box (round-3: tighten
-   centring): explicit line-height + symmetric padding + box-sizing on the
-   border so the 1px outline doesn't push content off-axis. */
+/* Count badge — monotone grayscale (no red).
+   Tight box around the number, sits inline beside the PARTICIPANTS label. */
 .count-badge {
   display: inline-flex;
   align-items: center;
@@ -286,9 +332,9 @@ body.popup-open #popup-close { display: flex; }
   height: 24px;
   padding: 0 8px;
   box-sizing: border-box;
-  background: rgba(255, 21, 0, 0.6);
-  border: 1px solid #DD0000;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.92);
   font-family: var(--f-body);
   font-size: 12px;
   font-weight: 700;
@@ -332,7 +378,7 @@ body.popup-open #popup-close { display: flex; }
   border-bottom-color: rgba(230,57,70,0.55);
 }
 
-/* ── Participant Name input row (bottom-border + circle [+]) ── */
+/* ── Participant Name input row (bottom-border underline) ── */
 .name-input-row {
   display: flex;
   align-items: center;
@@ -358,46 +404,9 @@ body.popup-open #popup-close { display: flex; }
   color: rgba(255,255,255,0.30);
 }
 
-#add-btn {
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 9999px;
-  background: rgba(255,255,255,0.92);
-  border: none;
-  color: #000;
-  font-size: 20px;
-  font-weight: 400;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-#add-btn:hover:not(:disabled) {
-  background: #fff;
-}
-#add-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-#add-btn:disabled {
-  background: rgba(255,255,255,0.25);
-  color: rgba(0,0,0,0.5);
-  cursor: not-allowed;
-}
-
-/* ── Action buttons row (CSV UPLOAD, SHUFFLE) ── */
-.action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-/* Pill buttons — exact box specs per round-2 feedback:
-   CSV  : border #9D9D9D, fill #3B3B3B, radius 5px
-   SHUFFLE: border #9D9D9D, fill #666666, radius 5px */
+/* Pill button — only the SHUFFLE control remains; lives inline in the
+   PARTICIPANTS header row. Result-page COPY/PLAY-AGAIN buttons use the
+   .pill-btn-result variant defined further down. */
 .pill-btn {
   display: inline-flex;
   align-items: center;
@@ -416,7 +425,6 @@ body.popup-open #popup-close { display: flex; }
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
-.pill-btn-csv     { background: #3B3B3B; }
 .pill-btn-shuffle { background: #666666; }
 .pill-btn:hover:not(:disabled) {
   filter: brightness(1.15);
@@ -430,54 +438,6 @@ body.popup-open #popup-close { display: flex; }
   flex-shrink: 0;
   margin-right: -2px;
 }
-
-.help-icon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255,255,255,0.45);
-  font-family: var(--f-body);
-  font-size: 9px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.75);
-  cursor: help;
-}
-.help-icon::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: rgba(20,20,22,0.98);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 10.5px;
-  font-weight: 400;
-  letter-spacing: 0.4px;
-  text-transform: none;
-  color: rgba(255,255,255,0.85);
-  width: max-content;
-  max-width: 240px;
-  white-space: normal;
-  text-align: left;
-  line-height: 1.45;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 50;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
-.help-icon:hover::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-#csv-input { display: none; }
 
 /* ─────────────────────────────────────────────
    Participants Roster
@@ -506,28 +466,26 @@ body.popup-open #popup-close { display: flex; }
   width: 100%;
   align-items: flex-start;
 }
-/* Each column has a bounded width so the trailing × stays close to the name
-   regardless of total participant count. With ≤10 participants only one column
-   renders, but it still occupies the same width as a single column would in
-   the multi-column layout (matches reference INPUT_PC.jpg spacing). */
+/* Column width grows with the doubled participant font so names don't get
+   chopped at the ellipsis. */
 .roster-card .participants-column {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 260px;
+  max-width: 320px;
 }
 
-/* Round-4: participant rows — Hanken Grotesk · 11px · letter-spacing 0.55px. */
+/* Participant rows in the setup card — doubled font size per round-5 feedback. */
 .roster-card .participant {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 22px;
+  gap: 10px;
+  height: 36px;
   font-family: var(--f-body);
-  font-size: 11px;
-  font-weight: 300;                    /* Light per round-3 */
+  font-size: 22px;
+  font-weight: 300;
   letter-spacing: 0.55px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.78);
@@ -536,34 +494,33 @@ body.popup-open #popup-close { display: flex; }
 }
 .roster-card .participant .rank-tag { display: none; }
 .roster-card .participant .dot {
-  width: 7px;
-  height: 7px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 /* Name hugs its content (no flex:1) so the × sits flush after the text,
-   not at the far right of the column. Reference INPUT_MO.jpg shows × tight
-   against the name. */
+   not at the far right of the column. */
 .roster-card .participant .name {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: calc(100% - 36px);        /* leave room for dot + gap + × */
+  max-width: calc(100% - 48px);        /* leave room for dot + gap + × */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .roster-card .participant .remove {
   opacity: 0;
-  width: 16px;
-  height: 16px;
-  margin-left: 2px;                    /* tight to the name */
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
   padding: 0;
   background: transparent;
   border: none;
   color: rgba(255,255,255,0.40);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 18px;
   line-height: 1;
   flex-shrink: 0;
   transition: color 0.15s, opacity 0.15s;
@@ -874,18 +831,16 @@ body.popup-open #title-hud { opacity: 0; }
   margin-top: -14px;   /* WINNER badge overlaps slightly with the 3D box */
 }
 
-/* WINNER badge — same spec as the count badge (round-2 feedback):
-   border #DD0000 100%, fill #FF1500 60%, radius 5px. */
+/* WINNER label — text only per round-5 feedback (no red box). */
 #result-title {
-  background: rgba(255, 21, 0, 0.6);
-  border: 1px solid #DD0000;
-  color: #fff;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.92);
   font-family: var(--f-body);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
   padding: 4px 14px;
-  border-radius: 5px;
   text-transform: uppercase;
   position: relative;
   z-index: 2;
@@ -893,14 +848,13 @@ body.popup-open #title-hud { opacity: 0; }
 
 #result-winner-name {
   margin-top: 6px;
-  background: rgba(255,255,255,0.05);
+  background: transparent;
   font-family: var(--f-display);
   font-size: 36px;
   font-weight: 700;
   color: var(--c-ink);
   letter-spacing: 0.5px;
   padding: 4px 24px 10px;
-  border-radius: 6px;
   text-align: center;
   max-width: min(80vw, 480px);
   overflow: hidden;
@@ -1102,13 +1056,14 @@ body[data-phase="result"] .brand-block {
   .brand-block { top: 22px; left: 26px; }
   .brand-icon { height: 28px; }
   .brand-tagline { font-size: 9px; padding-left: 10px; }
-  #sound-toggle { top: 22px; right: 26px; }
-  .setup-card { max-width: 540px; padding: 36px 36px 32px; gap: 24px; }
+  .setup-card { padding: 36px 36px 32px; gap: 24px; }
+  .setup-card[data-cols="3"] { max-width: 720px; }
 }
 
 /* ─────────────────────────────────────────────
    Responsive — Mobile (INPUT_MO.jpg)
-   Brand block at top, mute top-right, card fills width below.
+   Brand block at top, card fills width below; mute button now lives inline
+   beside START GAME at the bottom of the card (not fixed top-right).
    ───────────────────────────────────────────── */
 @media (max-width: 767px) {
   /* Prevent iOS input zoom (font ≥ 16px) */
@@ -1128,13 +1083,6 @@ body[data-phase="result"] .brand-block {
   }
   .brand-icon { height: 26px; width: auto; }
 
-  #sound-toggle {
-    top: 22px;
-    right: 22px;
-    width: 34px;
-    height: 34px;
-  }
-
   /* Setup panel scrolls vertically; the card sits below the brand chrome */
   #setup-panel {
     padding: 0 16px 24px;
@@ -1142,7 +1090,10 @@ body[data-phase="result"] .brand-block {
     align-items: flex-start;
     overflow-y: auto;
   }
-  .setup-card {
+  .setup-card,
+  .setup-card[data-cols="1"],
+  .setup-card[data-cols="2"],
+  .setup-card[data-cols="3"] {
     max-width: 100%;
     padding: 28px 24px 24px;
     gap: 22px;
@@ -1158,16 +1109,22 @@ body[data-phase="result"] .brand-block {
 
   .roster-card .participants { gap: 16px; }
   .roster-card .participant {
-    font-size: 11px;
-    height: 22px;
+    font-size: 18px;
+    height: 32px;
     letter-spacing: 0.55px;
   }
+  .roster-card .participants-column { max-width: none; }
   .roster-card .participant .remove { opacity: 0.5; } /* always visible on touch */
 
   .primary-btn {
     height: 50px;
     font-size: 14px;
     letter-spacing: 3px;
+    border-radius: 10px;
+  }
+  #sound-toggle {
+    width: 50px;
+    height: 50px;
     border-radius: 10px;
   }
 
