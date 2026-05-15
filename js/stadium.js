@@ -25,14 +25,14 @@ export function updateNebulaTexture(time) {
   nebulaRendered = true;
   const ctx = nebulaCtx;
   const w = 512, h = 512;
-  ctx.fillStyle = '#0a0a18';
+  ctx.fillStyle = '#06060e';
   ctx.fillRect(0, 0, w, h);
 
   const blobs = [
-    { cx: 256 + Math.sin(time * 0.3) * 80,  cy: 256 + Math.cos(time * 0.4) * 60, r: 140, color: 'rgba(0, 100, 255, 0.06)' },
-    { cx: 256 + Math.cos(time * 0.25) * 100, cy: 256 + Math.sin(time * 0.35) * 80, r: 120, color: 'rgba(150, 0, 255, 0.05)' },
-    { cx: 256 + Math.sin(time * 0.5) * 60,  cy: 256 + Math.cos(time * 0.2) * 90,  r: 100, color: 'rgba(0, 200, 200, 0.05)' },
-    { cx: 256 + Math.cos(time * 0.45) * 70, cy: 256 + Math.sin(time * 0.3) * 50, r: 90, color: 'rgba(255, 50, 150, 0.04)' },
+    { cx: 256 + Math.sin(time * 0.3) * 80,  cy: 256 + Math.cos(time * 0.4) * 60, r: 140, color: 'rgba(0, 100, 255, 0.04)' },
+    { cx: 256 + Math.cos(time * 0.25) * 100, cy: 256 + Math.sin(time * 0.35) * 80, r: 120, color: 'rgba(150, 0, 255, 0.035)' },
+    { cx: 256 + Math.sin(time * 0.5) * 60,  cy: 256 + Math.cos(time * 0.2) * 90,  r: 100, color: 'rgba(0, 200, 200, 0.035)' },
+    { cx: 256 + Math.cos(time * 0.45) * 70, cy: 256 + Math.sin(time * 0.3) * 50, r: 90, color: 'rgba(255, 50, 150, 0.025)' },
   ];
   for (const b of blobs) {
     const grad = ctx.createRadialGradient(b.cx, b.cy, 0, b.cx, b.cy, b.r);
@@ -42,7 +42,7 @@ export function updateNebulaTexture(time) {
     ctx.fillRect(0, 0, w, h);
   }
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
   ctx.lineWidth = 1;
   for (let r = 40; r < 256; r += 50) {
     ctx.beginPath();
@@ -71,7 +71,7 @@ function createStadium() {
   }
   const bowl = new THREE.Mesh(
     new THREE.LatheGeometry(points, 64),
-    new THREE.MeshStandardMaterial({ color: 0x0a0a18, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0x06060e, roughness: 0.75, metalness: 0.2, side: THREE.DoubleSide })
   );
   group.add(bowl);
 
@@ -91,10 +91,10 @@ function createStadium() {
   }
   nebulaUv.needsUpdate = true;
   group.add(new THREE.Mesh(nebulaGeo, new THREE.MeshBasicMaterial({
-    map: nebulaTexture, transparent: true, opacity: 0.85, side: THREE.DoubleSide,
+    map: nebulaTexture, transparent: true, opacity: 0.65, side: THREE.DoubleSide,
   })));
 
-  const gridMat = new THREE.LineBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.08 });
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.05 });
   const gridPoints = [];
   for (let ring = 1; ring <= 5; ring++) {
     const ringR = (ring / 5) * R * 0.95;
@@ -126,14 +126,14 @@ function createStadium() {
 
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(R, 0.05, 12, 64),
-    new THREE.MeshBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.5 })
+    new THREE.MeshBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.32 })
   );
   ring.rotation.x = -Math.PI / 2;
   group.add(ring);
 
   const outer = new THREE.Mesh(
     new THREE.TorusGeometry(R + 0.08, 0.15, 8, 64),
-    new THREE.MeshBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.06 })
+    new THREE.MeshBasicMaterial({ color: 0x00BFFF, transparent: true, opacity: 0.04 })
   );
   outer.rotation.x = -Math.PI / 2;
   group.add(outer);

@@ -30,6 +30,10 @@ function ordinal(n) {
   return `${n}th`;
 }
 
+function dismissShuffleHint() {
+  document.body.classList.remove('shuffle-hint-active');
+}
+
 function setInputsDisabled(disabled) {
   nameInput.disabled = disabled;
   document.getElementById('event-title').disabled = disabled;
@@ -83,8 +87,9 @@ export function renderParticipants() {
   // Build columns into a detached fragment so we can clone it cheaply into
   // every roster container without re-running the layout math.
   // Reference INPUT_PC.jpg / INPUT_MO.jpg: fill top-down in left column first,
-  // continue in right column when the column is full. PER_COL = 10.
-  const PER_COL = 10;
+  // continue in right column when the column is full. PER_COL = 9 so the
+  // roster fits in a fixed-height card with no internal scroll.
+  const PER_COL = 9;
   const N = rows.length;
   const colCount = Math.max(1, Math.ceil(N / PER_COL));
   const template = document.createElement('div');
@@ -130,13 +135,11 @@ export function renderParticipants() {
     });
   });
 
-  // Card badge: just the count number (matches INPUT_PC.jpg red badge).
   // HUD corner: "N / MAX" so the in-game roster reads as a leaderboard.
-  const cardCount = `${state.participants.length}`;
-  const hudCount  = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
-  document.querySelectorAll('.count-badge.count-display').forEach(el => { el.textContent = cardCount; });
+  const hudCount = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
   document.querySelectorAll('.count-display-hud').forEach(el => { el.textContent = hudCount; });
   battleBtn.disabled = state.participants.length < 2 || state.phase !== 'idle';
+  document.getElementById('shuffle-btn').disabled = state.participants.length < 2 || state.phase !== 'idle';
 }
 
 export function updateRankingsUI() {
@@ -252,12 +255,22 @@ export function initUI() {
 
   battleBtn.addEventListener('click', () => {
     if (!validateTitle()) return;
+    dismissShuffleHint();
     startBattle();
   });
   document.getElementById('btn-retry').addEventListener('click', resetGame);
   document.getElementById('btn-copy').addEventListener('click', copyResults);
 
   document.getElementById('shuffle-btn').addEventListener('click', shuffleParticipants);
+
+  // First-visit hint above the SHUFFLE icon. Shown once per page load and
+  // dismissed when the user clicks ×, starts a battle, or clicks the icon
+  // itself. Not persisted to storage — refresh re-arms it (same lifecycle
+  // as the landing splash).
+  document.body.classList.add('shuffle-hint-active');
+  const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
+  if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
+  document.getElementById('shuffle-btn').addEventListener('click', dismissShuffleHint);
 
   const soundBtn = document.getElementById('sound-toggle');
   soundBtn.addEventListener('click', () => {
@@ -330,6 +343,17 @@ export function initUI() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.body.classList.contains('popup-open')) {
       closePopup();
+      return;
+    }
+    // Spacebar toggles pause during battle. Ignore when typing in inputs or
+    // when the popup is open so it doesn't fight Edit-Participants.
+    if (e.code === 'Space' &&
+        state.phase === 'battle' &&
+        !document.body.classList.contains('popup-open') &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)) {
+      e.preventDefault();
+      togglePauseBattle();
     }
   });
 }

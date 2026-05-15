@@ -100,6 +100,7 @@ function runLandingSplash() {
 
   const video = document.getElementById('landing-logo');
   if (video && typeof video.addEventListener === 'function') {
+    video.playbackRate = 1.5;
     video.addEventListener('ended', dismiss, { once: true });
     video.addEventListener('error', dismiss, { once: true });
     // Some browsers reject autoplay silently — kick off play and dismiss

@@ -6,11 +6,16 @@
 <title>BLITZ — Random Selection Battle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
+
+  <!-- ─── Bottom black gradient — visible during the landing splash and
+       fades out as the setup card slides up, so the card reads as
+       emerging from darkness on first load. ─── -->
+  <div id="card-entrance-gradient" aria-hidden="true"></div>
 
   <!-- ─── Landing splash (plays LOGO.mp4 once on initial page load) ─── -->
   <div id="landing-splash">
@@ -40,7 +45,6 @@
     <div class="brand-mark">
       <img src="logo.jpg" alt="BLITZ" class="brand-icon">
     </div>
-    <p class="brand-tagline">DRIVEN BY PHYSICS — THE EXPERIENCE OF RANDOM<br>SELECTION THROUGH VISUAL COLLISION.</p>
   </header>
 
   <!-- ─── Popup mode chrome (gear during battle, backdrop dim) ─── -->
@@ -55,28 +59,17 @@
       <!-- TITLE field -->
       <div class="field-block">
         <label class="field-label" for="event-title">TITLE</label>
-        <input type="text" id="event-title" placeholder="TITLE" spellcheck="false" autocomplete="off">
+        <input type="text" id="event-title" placeholder="TITLE NAME" spellcheck="false" autocomplete="off">
       </div>
 
       <!-- PARTICIPANTS field -->
       <div class="field-block">
         <div class="field-header">
           <span class="field-label">PARTICIPANTS</span>
-          <span class="count-badge count-display">0</span>
-          <button id="shuffle-btn" class="pill-btn pill-btn-shuffle" type="button">
-            <svg class="btn-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="16 3 21 3 21 8"></polyline>
-              <line x1="4" y1="20" x2="21" y2="3"></line>
-              <polyline points="21 16 21 21 16 21"></polyline>
-              <line x1="15" y1="15" x2="21" y2="21"></line>
-              <line x1="4" y1="4" x2="9" y2="9"></line>
-            </svg>
-            <span>SHUFFLE</span>
-          </button>
         </div>
 
         <div class="name-input-row">
-          <input type="text" id="name-input" placeholder="Participant Name" spellcheck="false" autocomplete="off">
+          <input type="text" id="name-input" placeholder="PARTICIPANT NAME" spellcheck="false" autocomplete="off">
         </div>
 
         <!-- Card-embedded roster -->
@@ -85,9 +78,10 @@
             <div class="participants"></div>
           </div>
         </aside>
+
       </div>
 
-      <!-- START GAME row: mute toggle + primary CTA -->
+      <!-- START GAME row: mute toggle + shuffle icon + primary CTA -->
       <div class="cta-row">
         <button id="sound-toggle" title="Toggle Sound" aria-label="Toggle Sound">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -96,6 +90,22 @@
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
           </svg>
         </button>
+        <div class="shuffle-wrap">
+          <button id="shuffle-btn" type="button" title="Shuffle" aria-label="Shuffle participants">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="16 3 21 3 21 8"></polyline>
+              <line x1="4" y1="20" x2="21" y2="3"></line>
+              <polyline points="21 16 21 21 16 21"></polyline>
+              <line x1="15" y1="15" x2="21" y2="21"></line>
+              <line x1="4" y1="4" x2="9" y2="9"></line>
+            </svg>
+          </button>
+          <!-- First-visit hint: dismissed via X, never reappears within session -->
+          <div id="shuffle-hint" role="tooltip">
+            <span class="hint-text">참가자의 순서와 색상, 스택을<br>한번에 섞어요</span>
+            <button class="hint-close" type="button" aria-label="안내 닫기">&times;</button>
+          </div>
+        </div>
         <button id="battle-btn" class="primary-btn" disabled>START GAME</button>
       </div>
     </div>

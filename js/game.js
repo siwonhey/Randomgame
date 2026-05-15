@@ -145,13 +145,13 @@ function startCountdown() {
       setTimeout(tick, 800);
     } else {
       countdownEl.textContent = 'GO!';
-      countdownEl.style.color = 'rgba(57,255,20,.9)';
-      countdownEl.style.textShadow = '0 0 60px rgba(57,255,20,.5)';
+      countdownEl.style.color = 'rgba(255,255,255,.95)';
+      countdownEl.style.textShadow = '0 0 60px rgba(255,255,255,.45)';
       playBeep(1200, 0.3, 0.2);
       setTimeout(() => {
         countdownEl.style.opacity = '0';
-        countdownEl.style.color = 'rgba(0,191,255,.9)';
-        countdownEl.style.textShadow = '0 0 60px rgba(0,191,255,.4)';
+        countdownEl.style.color = 'rgba(255,255,255,.95)';
+        countdownEl.style.textShadow = '0 0 60px rgba(255,255,255,.35)';
         launchTops();
       }, 600);
     }
@@ -215,24 +215,37 @@ function showResult() {
   document.getElementById('result-winner-name').textContent = winner.name;
   showWinner(winner);
 
-  // Ranks 2nd onward — winner is displayed separately in 3D above the list
+  // Ranks 2nd onward — winner is displayed separately in 3D above the list.
+  // Split into top-down columns of 8 so every name is visible at once
+  // (no scroll). Items 1-8 → column 1, 9-16 → column 2, ...
   resultList.innerHTML = '';
-  state.rankings.slice(1).forEach((top, i) => {
-    const div = document.createElement('div');
-    div.className = 'result-item';
-    const rank = i + 2;
-    const medal = rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
-    const rankSpan = document.createElement('span');
-    rankSpan.className = 'result-rank';
-    rankSpan.textContent = medal;
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'result-name';
-    nameSpan.textContent = top.name;
-    div.appendChild(rankSpan);
-    div.appendChild(nameSpan);
-    div.style.animationDelay = `${i * 0.08}s`;
-    resultList.appendChild(div);
-  });
+  const RESULT_PER_COL = 8;
+  const items = state.rankings.slice(1);
+  const colCount = Math.max(1, Math.ceil(items.length / RESULT_PER_COL));
+  for (let c = 0; c < colCount; c++) {
+    const colEl = document.createElement('div');
+    colEl.className = 'result-column';
+    const start = c * RESULT_PER_COL;
+    const end = Math.min(items.length, start + RESULT_PER_COL);
+    for (let i = start; i < end; i++) {
+      const top = items[i];
+      const rank = i + 2;
+      const medal = rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      const rankSpan = document.createElement('span');
+      rankSpan.className = 'result-rank';
+      rankSpan.textContent = medal;
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'result-name';
+      nameSpan.textContent = top.name;
+      div.appendChild(rankSpan);
+      div.appendChild(nameSpan);
+      div.style.animationDelay = `${i * 0.08}s`;
+      colEl.appendChild(div);
+    }
+    resultList.appendChild(colEl);
+  }
 }
 
 // ── Reset ──

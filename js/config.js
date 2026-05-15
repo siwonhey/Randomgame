@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════
 // CONFIG — shared constants and utilities
 // ═══════════════════════════════════════════
+// Pastel-vivid palette tuned to read against a near-black stadium.
+// Reference colors supplied in round-7 feedback: EA8EFF, FFA7BD, FF4344, 78FBAB, AA78FD.
 export const NEON_COLORS = [
-  0x39FF14, 0x00BFFF, 0xBF40FF, 0xFF6EC7,
-  0xDFFF00, 0x00FFEF, 0xFF6700, 0xFF003F,
-  // 5 additional non-overlapping neon tones (v1.1)
-  0xFFFF33, 0xFF00FF, 0x00FF88, 0x8A2BE2, 0x40E0FF,
+  0xEA8EFF, 0xFFA7BD, 0xFF4344, 0x78FBAB, 0xAA78FD,
+  0xFFB876, 0x76D6FF, 0xFFE066, 0x9DFF76, 0xFF76D6,
+  0x76FFD8, 0xFFCC66, 0xC576FF,
 ];
 
 export const STADIUM_RADIUS = 200;           // matter.js units

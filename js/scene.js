@@ -22,10 +22,10 @@ scene.add(dirLight);
 
 // HemisphereLight replaces per-top PointLights — gives ambient color separation
 // (cool sky / dark ground) without per-mesh light cost.
-const hemiLight = new THREE.HemisphereLight(0x1a1a3a, 0x050510, 0.55);
+const hemiLight = new THREE.HemisphereLight(0x2a2a2c, 0x070708, 0.55);
 scene.add(hemiLight);
 
-export const spotLight = new THREE.SpotLight(0x00BFFF, 0, 20, Math.PI / 6, 0.5);
+export const spotLight = new THREE.SpotLight(0xffffff, 0, 20, Math.PI / 6, 0.5);
 spotLight.position.set(0, 10, 0);
 scene.add(spotLight);
 
