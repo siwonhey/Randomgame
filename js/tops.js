@@ -31,7 +31,7 @@ function ensureSharedTopGeometry() {
 const BASE_SCALE        = 1.6;
 const DISC_R_BASE       = 0.35;   // disc top-face radius
 const DISC_BOT_R_BASE   = 0.30;   // disc bottom-face radius (slight taper)
-const DISC_H_BASE       = 0.16;   // disc thickness — bumped from 0.12 with the handle removed (Option 2) so the body recovers some vertical mass.
+const DISC_H_BASE       = 0.12;   // disc thickness
 const CLAW_COUNT        = 4;      // 3–5 curved claws
 const CLAW_REACH        = 0.14;   // outward reach beyond disc edge
 const CLAW_LEAN         = 0.16;   // tangential forward offset of the claw tip
@@ -47,6 +47,18 @@ const CLAW_ATTACH_FRAC  = 0.96;   // base sits slightly inside disc edge (seam h
 // changing the claw TIP position — which means OUTER_R_BASE (and therefore
 // the Matter.js collision footprint) is unchanged.
 const CLAW_INSET        = 0.06;
+
+// Ring-shaped intaglio groove carved into the disc TOP face. Built into the
+// LatheGeometry profile in ensureSharedTopGeometry() — purely geometry, no
+// extra draw calls, no shader/material changes. Width = 15% of disc radius
+// (matches the handle's thickness scale); ring center sits midway between
+// the disc center and outer edge; depth is shallow so the engraving reads
+// as a machined detail rather than a deep slot.
+const DISC_RING_CENTER_R = DISC_R_BASE / 2;                       // 0.175 — midpoint
+const DISC_RING_WIDTH    = DISC_R_BASE * 0.15;                    // 0.0525
+const DISC_RING_INNER_R  = DISC_RING_CENTER_R - DISC_RING_WIDTH / 2;
+const DISC_RING_OUTER_R  = DISC_RING_CENTER_R + DISC_RING_WIDTH / 2;
+const DISC_RING_DEPTH    = 0.015;
 
 // Outer claw-tip radius (used by both the claw mesh placement and the physics
 // hitbox — keeping them derived from the same formula is the whole point).
@@ -115,7 +127,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const disc = new THREE.Mesh(
     sharedDiscGeo,
     new THREE.MeshStandardMaterial({
-      color: c, transparent: true, opacity: 0.82,
+      color: c,
       roughness: 0.15, metalness: 0.2,
       emissive: c, emissiveIntensity: 0.35,
       side: THREE.DoubleSide,
@@ -161,15 +173,10 @@ export function createTop3D(color, scale = BASE_SCALE) {
   dctx.arc(0, 0, 102, 0, Math.PI * 2);
   dctx.stroke();
 
-  // ③ Deep inner shadow groove — strengthened (alpha 0.45 → 0.70,
-  //    lineWidth 2 → 3.5) so the rim reads as physically engraved.
-  dctx.strokeStyle = 'rgba(0, 0, 0, 0.70)';
-  dctx.lineWidth = 3.5;
-  dctx.beginPath();
-  dctx.arc(0, 0, 93, 0, Math.PI * 2);
-  dctx.stroke();
-
-  // ④ Faint inner reflection just below the groove — sells the depth.
+  // ④ Faint inner reflection — used to sit just below a black engraving
+  //    groove; the groove was removed per user feedback ("까만 테두리 링
+  //    없애줘"), but this slim highlight stays so the rim transition into
+  //    the jelly disc isn't a hard edge.
   dctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
   dctx.lineWidth = 0.8;
   dctx.beginPath();
@@ -278,7 +285,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   // ── Curved claws around the disc's outer edge (all lean same direction) ──
   const clawGeo = sharedClawGeo;
   const clawMat = new THREE.MeshStandardMaterial({
-    color: c, transparent: true, opacity: 0.88,
+    color: c,
     roughness: 0.08, metalness: 0.7,
     emissive: c, emissiveIntensity: 0.45,
     side: THREE.DoubleSide,
@@ -298,7 +305,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   // ── Core glow ──
   const core = new THREE.Mesh(
     sharedCoreGeo,
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 })
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.9 })
   );
   core.position.y = discCenterY + 0.02;
   group.add(core);
@@ -308,7 +315,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const handle = new THREE.Mesh(
     sharedHandleGeo,
     new THREE.MeshStandardMaterial({
-      color: c, transparent: true, opacity: 0.9, roughness: 0.1,
+      color: c, roughness: 0.1,
       emissive: c, emissiveIntensity: 0.15,
     })
   );
@@ -320,7 +327,7 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const tip = new THREE.Mesh(
     sharedTipGeo,
     new THREE.MeshStandardMaterial({
-      color: c, transparent: true, opacity: 0.8,
+      color: c,
       metalness: 0.85, roughness: 0.15,
       emissive: c, emissiveIntensity: 0.25,
     })

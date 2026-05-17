@@ -6,8 +6,8 @@
 
 :root {
   --c-canvas:      #000000;
-  --c-card:        #161617;
-  --c-card-2:      #1f1f20;
+  --c-card:        #1d1d1f;
+  --c-card-2:      #232325;
   --c-card-soft:   rgba(255,255,255,0.04);
   --c-hairline:    rgba(255,255,255,0.10);
   --c-hairline-hi: rgba(255,255,255,0.18);
