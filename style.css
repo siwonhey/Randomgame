@@ -157,10 +157,11 @@ body[data-landing="active"] #card-entrance-gradient {
   top: 28px;
   left: 36px;
   z-index: 14;
-  pointer-events: none;
+  cursor: pointer;
   user-select: none;
   transition: opacity 0.4s ease;
 }
+.brand-block:hover .brand-icon { opacity: 1; }
 .brand-mark {
   display: flex;
   align-items: center;
@@ -514,14 +515,12 @@ body.shuffle-hint-active #shuffle-hint {
   font-family: var(--f-body);
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
   outline: none;
 }
 #event-title::placeholder {
   color: rgba(255,255,255,0.30);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
   font-weight: 500;
 }
 #event-title.warn,
@@ -541,15 +540,14 @@ body.shuffle-hint-active #shuffle-hint {
   font-family: var(--f-body);
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
   padding: 0;
   outline: none;
 }
 #name-input::placeholder {
   color: rgba(255,255,255,0.30);
   font-weight: 500;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 /* Pill button — only the SHUFFLE control remains; lives inline in the
@@ -639,8 +637,7 @@ body.shuffle-hint-active #shuffle-hint {
   font-family: var(--f-body);
   font-size: 18px;
   font-weight: 400;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
+  letter-spacing: 0.2px;
   color: rgba(255,255,255,0.78);
   animation: fadeIn 0.25s ease;
   transition: opacity 0.3s ease;
@@ -727,8 +724,7 @@ body.shuffle-hint-active #shuffle-hint {
   height: 24px;
   font-family: var(--f-body);
   font-size: 12px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.2px;
   color: rgba(255,255,255,0.70);
 }
 .roster-corner .participant .rank-tag {
@@ -815,8 +811,7 @@ body.shuffle-hint-active #shuffle-hint {
   font-family: var(--f-body);
   font-size: 16px;
   font-weight: 500;
-  letter-spacing: 4px;
-  text-transform: uppercase;
+  letter-spacing: 1px;
   color: rgba(255,255,255,0.85);
   text-shadow: 0 0 24px rgba(0,0,0,0.6);
   white-space: nowrap;
@@ -948,7 +943,9 @@ body.popup-open #title-hud { opacity: 0; }
   justify-content: center;
   z-index: 20;
   backdrop-filter: blur(8px);
-  padding: 60px 24px 40px;
+  /* Symmetric vertical padding so flex-centering hits the true viewport
+     midline; 60px clears the fixed brand mark at top: 28px. */
+  padding: 60px 24px;
 }
 #result-overlay.show {
   display: flex;
@@ -984,30 +981,35 @@ body.popup-open #title-hud { opacity: 0; }
   margin-top: -14px;   /* WINNER badge overlaps slightly with the 3D box */
 }
 
-/* WINNER label — text only per round-5 feedback (no red box). */
+/* WINNER label — eyebrow above the winner name. Muted weight/color and
+   wider tracking so it recedes as a label; the name below is the focal point. */
 #result-title {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.55);
   font-family: var(--f-body);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  padding: 4px 14px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  line-height: 1;
+  padding: 0;
   text-transform: uppercase;
   position: relative;
   z-index: 2;
 }
 
 #result-winner-name {
-  margin-top: 6px;
+  /* Tight eyebrow-to-heading gap so WINNER reads as a label for the name
+     directly below, not as a separate stacked element. */
+  margin-top: 4px;
   background: transparent;
   font-family: var(--f-body);
   font-size: 36px;
   font-weight: 700;
   color: var(--c-ink);
   letter-spacing: 0.5px;
-  padding: 4px 24px 10px;
+  line-height: 1.1;
+  padding: 0 24px;
   text-align: center;
   max-width: min(80vw, 480px);
   overflow: hidden;
@@ -1110,7 +1112,10 @@ body.popup-open #title-hud { opacity: 0; }
 #popup-toggle {
   position: fixed;
   top: 28px;
-  left: 36px;
+  /* Moved to top-right so the top-left slot is reserved for the brand block —
+     the logo is now always visible in non-popup states and acts as a
+     "return to setup" link via its click handler in ui.js. */
+  right: 36px;
   z-index: 15;
   display: none;
   width: 38px;
@@ -1131,17 +1136,12 @@ body.popup-open #title-hud { opacity: 0; }
 }
 
 /* Show ⚙ only during phases where the setup panel is hidden. The brand block
-   keeps the same top-left slot, so we hide the brand block while ⚙ is shown
-   to avoid stacking. */
+   now stays visible at top-left in every non-popup state so the user can
+   click it to return to the setup screen at any time. */
 body[data-phase="intro"]     #popup-toggle,
 body[data-phase="countdown"] #popup-toggle,
 body[data-phase="battle"]    #popup-toggle {
   display: flex;
-}
-body[data-phase="intro"]     .brand-block,
-body[data-phase="countdown"] .brand-block,
-body[data-phase="battle"]    .brand-block {
-  opacity: 0;
 }
 body.popup-open #popup-toggle { display: none; }
 body.popup-open .brand-block  { opacity: 0; }
@@ -1313,11 +1313,11 @@ body[data-phase="result"] .brand-block {
 
   /* Result overlay: tighter spacing on mobile */
   #result-3d { width: 200px; height: 200px; }
-  #result-winner-name { font-size: 28px; padding: 4px 18px 8px; }
+  #result-winner-name { font-size: 28px; padding: 0 18px; }
   #result-list { padding: 12px 0 0; min-width: 160px; gap: 18px; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
-  #popup-toggle { top: 22px; left: 22px; width: 34px; height: 34px; }
+  #popup-toggle { top: 22px; right: 22px; width: 34px; height: 34px; }
 }
 
 /* Mobile landscape — squeeze HUD vertically */

@@ -219,11 +219,11 @@ function validateTitle() {
   const titleEl = document.getElementById('event-title');
   if (titleEl.value.trim()) {
     titleEl.classList.remove('warn');
-    titleEl.placeholder = 'TITLE';
+    titleEl.placeholder = 'Title';
     return true;
   }
   titleEl.classList.add('warn');
-  titleEl.placeholder = 'PLEASE ENTER TITLE';
+  titleEl.placeholder = 'Please enter title';
   titleEl.focus();
   return false;
 }
@@ -255,22 +255,33 @@ export function initUI() {
 
   battleBtn.addEventListener('click', () => {
     if (!validateTitle()) return;
-    dismissShuffleHint();
     startBattle();
   });
   document.getElementById('btn-retry').addEventListener('click', resetGame);
   document.getElementById('btn-copy').addEventListener('click', copyResults);
 
+  // Click the top-left brand logo to return to the setup screen from any
+  // in-game or result state. No-op when already on the setup screen, or
+  // while the participant-edit popup is open (the popup has its own dismiss
+  // controls and shouldn't be short-circuited by the logo).
+  const brandBlock = document.querySelector('.brand-block');
+  if (brandBlock) {
+    brandBlock.addEventListener('click', () => {
+      if (state.phase === 'idle') return;
+      if (document.body.classList.contains('popup-open')) return;
+      resetGame();
+    });
+  }
+
   document.getElementById('shuffle-btn').addEventListener('click', shuffleParticipants);
 
-  // First-visit hint above the SHUFFLE icon. Shown once per page load and
-  // dismissed when the user clicks ×, starts a battle, or clicks the icon
-  // itself. Not persisted to storage — refresh re-arms it (same lifecycle
-  // as the landing splash).
+  // First-visit hint above the SHUFFLE icon. Per user feedback, only the
+  // explicit × button on the bubble dismisses it — pressing SHUFFLE itself
+  // (or starting a battle) does NOT close the bubble. Not persisted to
+  // storage — refresh re-arms it (same lifecycle as the landing splash).
   document.body.classList.add('shuffle-hint-active');
   const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
   if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
-  document.getElementById('shuffle-btn').addEventListener('click', dismissShuffleHint);
 
   const soundBtn = document.getElementById('sound-toggle');
   soundBtn.addEventListener('click', () => {
@@ -297,7 +308,7 @@ export function initUI() {
     const titleEl = document.getElementById('event-title');
     if (titleEl.classList.contains('warn') && titleEl.value.trim()) {
       titleEl.classList.remove('warn');
-      titleEl.placeholder = 'TITLE';
+      titleEl.placeholder = 'Title';
     }
     saveToLocalStorage();
     syncTitleHud();

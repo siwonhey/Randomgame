@@ -124,17 +124,12 @@ syncTitleHud();                          // pick up the loaded event title
 runLandingSplash();
 animate();
 
-// BGM kicks in on the first user gesture (browsers gate AudioContext on
-// interaction). Once the splash dismisses the user is on the input screen,
-// so any click/keypress there triggers BGM and it persists into battle/result.
-function startBGMOnFirstInteraction() {
-  const start = () => {
-    ensureAudio();
-    startEDM('idle');
-    document.removeEventListener('pointerdown', start);
-    document.removeEventListener('keydown', start);
-  };
-  document.addEventListener('pointerdown', start, { once: true });
-  document.addEventListener('keydown', start, { once: true });
-}
-startBGMOnFirstInteraction();
+// BGM is scheduled as soon as the page loads so it starts during the landing
+// splash whenever the browser permits it (returning visitors past Chrome's
+// Media Engagement threshold, or any case where the user has clicked on the
+// page before the splash finishes). If autoplay is blocked, startEDM defers
+// the actual scheduling via a statechange listener — it kicks in the instant
+// the AudioContext resumes, which happens on the first user gesture handled
+// by unlockAudio() (bound in game.js on window pointerdown/keydown).
+ensureAudio();
+startEDM('idle');

@@ -104,6 +104,22 @@ export function startEDM(mode = 'idle') {
     return;
   }
   ensureAudio();
+
+  // If the AudioContext is still suspended (browser autoplay policy blocks
+  // it until a user gesture), defer the actual scheduling until it resumes.
+  // Scheduling oscillators while suspended causes them to pile up at the
+  // frozen currentTime — they'd all fire simultaneously on resume.
+  if (audioCtx.state !== 'running') {
+    const onReady = () => {
+      if (audioCtx.state === 'running') {
+        audioCtx.removeEventListener('statechange', onReady);
+        startEDM(edmMode);
+      }
+    };
+    audioCtx.addEventListener('statechange', onReady);
+    return;
+  }
+
   edmPlaying = true;
   const bpm = 140;
   const beatLen = 60 / bpm;

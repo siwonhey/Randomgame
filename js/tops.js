@@ -9,19 +9,19 @@ const { Bodies, Body, Composite } = Matter;
 
 export const tops = [];
 
-let sharedDiscGeo = null;
-let sharedClawGeo = null;
-let sharedCoreGeo = null;
+let sharedDiscGeo   = null;
+let sharedClawGeo   = null;
+let sharedCoreGeo   = null;
 let sharedHandleGeo = null;
-let sharedTipGeo = null;
+let sharedTipGeo    = null;
 
 function ensureSharedTopGeometry() {
   if (sharedDiscGeo) return;
-  sharedDiscGeo = new THREE.CylinderGeometry(DISC_R_BASE, DISC_BOT_R_BASE, DISC_H_BASE, 16);
-  sharedClawGeo = buildClawGeometry(1);
-  sharedCoreGeo = new THREE.SphereGeometry(0.08, 8, 8);
+  sharedDiscGeo   = new THREE.CylinderGeometry(DISC_R_BASE, DISC_BOT_R_BASE, DISC_H_BASE, 16);
+  sharedClawGeo   = buildClawGeometry(1);
+  sharedCoreGeo   = new THREE.SphereGeometry(0.08, 8, 8);
   sharedHandleGeo = new THREE.CylinderGeometry(0.02, 0.04, 0.35, 8);
-  sharedTipGeo = new THREE.ConeGeometry(0.05, 0.32, 8);
+  sharedTipGeo    = new THREE.ConeGeometry(0.05, 0.32, 8);
 }
 
 // ── Shared geometry constants ──
@@ -31,13 +31,22 @@ function ensureSharedTopGeometry() {
 const BASE_SCALE        = 1.6;
 const DISC_R_BASE       = 0.35;   // disc top-face radius
 const DISC_BOT_R_BASE   = 0.30;   // disc bottom-face radius (slight taper)
-const DISC_H_BASE       = 0.12;   // disc thickness
+const DISC_H_BASE       = 0.16;   // disc thickness — bumped from 0.12 with the handle removed (Option 2) so the body recovers some vertical mass.
 const CLAW_COUNT        = 4;      // 3–5 curved claws
 const CLAW_REACH        = 0.14;   // outward reach beyond disc edge
 const CLAW_LEAN         = 0.16;   // tangential forward offset of the claw tip
 const CLAW_BASE_W       = 0.14;   // base width along disc tangent
 const CLAW_THICK        = 0.09;   // claw thickness (disc-matching height)
 const CLAW_ATTACH_FRAC  = 0.96;   // base sits slightly inside disc edge (seam hiding)
+// Claw back extends radially INWARD into the disc body by this much (world
+// units). The disc is a tapered cylinder — its radius shrinks from 0.35 at
+// the top to 0.30 at the bottom, so at the claw's lower edge the disc is
+// narrower than the claw attach point and a small wedge gap appears between
+// the disc surface and the claw root. Burying the claw back ~0.06 inside
+// the disc fills that gap so the claw reads as integral to the body without
+// changing the claw TIP position — which means OUTER_R_BASE (and therefore
+// the Matter.js collision footprint) is unchanged.
+const CLAW_INSET        = 0.06;
 
 // Outer claw-tip radius (used by both the claw mesh placement and the physics
 // hitbox — keeping them derived from the same formula is the whole point).
@@ -54,8 +63,14 @@ function buildClawShape(S) {
   const bw  = CLAW_BASE_W * S;
   const r   = CLAW_REACH   * S;
   const ln  = CLAW_LEAN    * S;
+  const ins = CLAW_INSET   * S;
   const shape = new THREE.Shape();
-  shape.moveTo(0, -bw / 2);
+  // Back extends inward by `ins` so the claw root is buried inside the disc
+  // body (hiding the taper gap). The outer profile from (0,-bw/2) → tip →
+  // (0,bw/2) is unchanged, so the visible silhouette and collision tip
+  // position both match the previous design.
+  shape.moveTo(-ins, -bw / 2);
+  shape.lineTo(0, -bw / 2);
   shape.bezierCurveTo(
     r * 0.22, -bw * 0.15,
     r * 0.55,  ln * 0.38,
@@ -66,6 +81,7 @@ function buildClawShape(S) {
     r * 0.12,  bw * 0.55,
     0,         bw / 2,
   );
+  shape.lineTo(-ins, bw / 2);
   shape.closePath();
   return shape;
 }
@@ -109,7 +125,19 @@ export function createTop3D(color, scale = BASE_SCALE) {
   disc.position.y = discCenterY;
   group.add(disc);
 
-  // ── Top-face decal ──
+  // ── Top-face decal (Option 2, refined) ──
+  // Rendered once at top-creation time into a 256×256 canvas and uploaded as
+  // a CanvasTexture — every subsequent frame is a free texture sample, so
+  // the layering below adds zero render cost.
+  //
+  // Tuning vs. the first Option 2 pass (user feedback: needs more 강약):
+  //   • Tick count 12 → 8 (cleaner), tick length +13% (still legible while
+  //     spinning).
+  //   • Outer rim engraving deepened with a 4-stop bevel (highlight rim →
+  //     flat steel → dark groove → faint inner reflection).
+  //   • Central hub now sits on a small dark "step" with its own bright rim,
+  //     so the star emblem reads as recessed into the body rather than
+  //     painted on the surface.
   const decalCanvas = document.createElement('canvas');
   decalCanvas.width = 256; decalCanvas.height = 256;
   const dctx = decalCanvas.getContext('2d');
@@ -117,22 +145,125 @@ export function createTop3D(color, scale = BASE_SCALE) {
   const hexStr = '#' + c.getHexString();
   dctx.save();
   dctx.translate(128, 128);
-  for (let i = 0; i < 3; i++) {
-    dctx.save();
-    dctx.rotate(i * (Math.PI * 2 / 3));
-    dctx.fillStyle = hexStr;
-    dctx.globalAlpha = 0.9;
-    dctx.beginPath();
-    dctx.roundRect(-10, -125, 20, 120, 5);
-    dctx.fill();
-    dctx.restore();
-  }
-  dctx.globalAlpha = 0.3;
-  dctx.strokeStyle = '#ffffff';
-  dctx.lineWidth = 8;
+
+  // ① Outer bevel highlight — bright hairline just outside the main rim.
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+  dctx.lineWidth = 1.5;
   dctx.beginPath();
-  dctx.arc(0, 0, 85, 0, Math.PI * 2);
+  dctx.arc(0, 0, 107, 0, Math.PI * 2);
   dctx.stroke();
+
+  // ② Main steel rim — wide flat stroke (slightly thinner than v1 so the
+  //    bevel above + groove below read as a true 3-step bevel).
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+  dctx.lineWidth = 7;
+  dctx.beginPath();
+  dctx.arc(0, 0, 102, 0, Math.PI * 2);
+  dctx.stroke();
+
+  // ③ Deep inner shadow groove — strengthened (alpha 0.45 → 0.70,
+  //    lineWidth 2 → 3.5) so the rim reads as physically engraved.
+  dctx.strokeStyle = 'rgba(0, 0, 0, 0.70)';
+  dctx.lineWidth = 3.5;
+  dctx.beginPath();
+  dctx.arc(0, 0, 93, 0, Math.PI * 2);
+  dctx.stroke();
+
+  // ④ Faint inner reflection just below the groove — sells the depth.
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  dctx.lineWidth = 0.8;
+  dctx.beginPath();
+  dctx.arc(0, 0, 90, 0, Math.PI * 2);
+  dctx.stroke();
+
+  // ⑤ Translucent color "jelly" disc — the colored core of the top face.
+  dctx.globalAlpha = 0.45;
+  dctx.fillStyle = hexStr;
+  dctx.beginPath();
+  dctx.arc(0, 0, 88, 0, Math.PI * 2);
+  dctx.fill();
+
+  // ⑥ Radial gradient overlay — bright top-left, dark rim, gives the jelly
+  //    disc its 3D dome reading.
+  const radial = dctx.createRadialGradient(0, -10, 0, 0, 0, 88);
+  radial.addColorStop(0,   'rgba(255, 255, 255, 0.40)');
+  radial.addColorStop(0.5, 'rgba(255, 255, 255, 0.06)');
+  radial.addColorStop(1,   'rgba(0, 0, 0, 0.45)');
+  dctx.fillStyle = radial;
+  dctx.globalAlpha = 1;
+  dctx.beginPath();
+  dctx.arc(0, 0, 88, 0, Math.PI * 2);
+  dctx.fill();
+
+  // ⑦ 8 gauge ticks (was 12). 4 long at cardinals + 4 short at intermediates.
+  //    Lengths bumped ~13% so the ticks survive rotation blur.
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const longer = i % 2 === 0;
+    const r1 = longer ? 67 : 74;   // was 70/76 in v1
+    const r2 = 86;
+    dctx.lineWidth = longer ? 2.2 : 1.4;
+    dctx.beginPath();
+    dctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+    dctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+    dctx.stroke();
+  }
+
+  // ⑧ Hub step — a darker disc behind the emblem, plus a bright outline,
+  //    so the central area reads as a small recessed platform.
+  dctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
+  dctx.beginPath();
+  dctx.arc(0, 0, 34, 0, Math.PI * 2);
+  dctx.fill();
+
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+  dctx.lineWidth = 1.2;
+  dctx.beginPath();
+  dctx.arc(0, 0, 34, 0, Math.PI * 2);
+  dctx.stroke();
+
+  // ⑨ Subtle inner shadow on the hub step — extra depth cue.
+  dctx.strokeStyle = 'rgba(0, 0, 0, 0.30)';
+  dctx.lineWidth = 1.5;
+  dctx.beginPath();
+  dctx.arc(0, 0, 31, 0, Math.PI * 2);
+  dctx.stroke();
+
+  // ⑩ 6-point star emblem — filled + outlined.
+  const drawStar = () => {
+    dctx.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + Math.PI / 2;
+      const r = i % 2 === 0 ? 26 : 12;
+      if (i === 0) dctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      else dctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    dctx.closePath();
+  };
+  dctx.fillStyle = hexStr;
+  dctx.globalAlpha = 0.95;
+  drawStar();
+  dctx.fill();
+
+  dctx.strokeStyle = 'rgba(255, 255, 255, 0.50)';
+  dctx.lineWidth = 1;
+  drawStar();
+  dctx.stroke();
+
+  // ⑪ Center beads (white over color).
+  dctx.fillStyle = '#ffffff';
+  dctx.globalAlpha = 0.85;
+  dctx.beginPath();
+  dctx.arc(0, 0, 5, 0, Math.PI * 2);
+  dctx.fill();
+
+  dctx.fillStyle = hexStr;
+  dctx.globalAlpha = 1;
+  dctx.beginPath();
+  dctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+  dctx.fill();
+
   dctx.restore();
 
   const decalTex = new THREE.CanvasTexture(decalCanvas);
