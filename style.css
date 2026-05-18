@@ -1000,10 +1000,13 @@ body.popup-open #title-hud { opacity: 0; }
 #result-3d {
   width: 280px;
   height: 280px;
-  background: #000;
-  border-radius: 4px;
+  background: transparent;
   overflow: hidden;
   position: relative;
+  /* Radial mask softens the square video edges so the spinner fades into
+     the dark backdrop instead of reading as a hard-edged tile. */
+  -webkit-mask-image: radial-gradient(circle at center, #000 52%, rgba(0,0,0,0) 92%);
+          mask-image: radial-gradient(circle at center, #000 52%, rgba(0,0,0,0) 92%);
 }
 #result-3d canvas {
   display: block;
