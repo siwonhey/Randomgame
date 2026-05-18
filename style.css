@@ -1077,7 +1077,7 @@ body.popup-open #title-hud { opacity: 0; }
 #result-list .result-column {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   min-width: 0;
 }
@@ -1098,14 +1098,17 @@ body.popup-open #title-hud { opacity: 0; }
   font-weight: 400;
   color: rgba(255,255,255,0.50);
   letter-spacing: 0.4px;
-  /* No fixed width: the rank-tag flows with the name so each row's visual
-     center matches its geometric center, keeping the column aligned to the
-     winner spinner above. */
+  /* Fixed width so every rank tag (2nd / 3rd / 10th / 20th …) occupies the
+     same horizontal slot — names then start at an identical x-coordinate
+     regardless of their length, keeping the column visually left-aligned. */
+  flex: 0 0 32px;
+  text-align: left;
 }
 #result-list .result-name {
   font-weight: 600;
   color: rgba(255,255,255,0.92);
   letter-spacing: 0.5px;
+  text-align: left;
 }
 
 .result-actions {
