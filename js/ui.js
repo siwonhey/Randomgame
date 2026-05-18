@@ -5,7 +5,7 @@ import { tops, addTopPhysics, removeTopPhysics, repositionTops, clearTops } from
 import {
   startBattle, resetGame,
   setUIUpdateCallback, setInputsLockCallback,
-  pauseBattle, resumeBattle, togglePauseBattle,
+  resumeBattle, togglePauseBattle,
 } from './game.js';
 import { renderer } from './scene.js';
 import {
@@ -38,7 +38,16 @@ function setInputsDisabled(disabled) {
   nameInput.disabled = disabled;
   document.getElementById('event-title').disabled = disabled;
   document.getElementById('shuffle-btn').disabled = disabled;
+  document.getElementById('name-submit').disabled = disabled;
   document.querySelectorAll('.roster-block .remove').forEach(b => { b.disabled = disabled; });
+}
+
+function submitNameInput() {
+  const val = nameInput.value.trim();
+  if (!val) return;
+  parseNames(val).forEach(n => addParticipant(n));
+  nameInput.value = '';
+  nameInput.focus();
 }
 
 export function addParticipant(name) {
@@ -135,8 +144,8 @@ export function renderParticipants() {
     });
   });
 
-  // HUD corner: "N / MAX" so the in-game roster reads as a leaderboard.
-  const hudCount = `${state.participants.length} / ${MAX_PARTICIPANTS}`;
+  // HUD corner: current participant count only (max is implied by the cap).
+  const hudCount = `${state.participants.length}`;
   document.querySelectorAll('.count-display-hud').forEach(el => { el.textContent = hudCount; });
   battleBtn.disabled = state.participants.length < 2 || state.phase !== 'idle';
   document.getElementById('shuffle-btn').disabled = state.participants.length < 2 || state.phase !== 'idle';
@@ -219,11 +228,11 @@ function validateTitle() {
   const titleEl = document.getElementById('event-title');
   if (titleEl.value.trim()) {
     titleEl.classList.remove('warn');
-    titleEl.placeholder = 'Title';
+    titleEl.placeholder = '배틀 타이틀을 입력하세요';
     return true;
   }
   titleEl.classList.add('warn');
-  titleEl.placeholder = 'Please enter title';
+  titleEl.placeholder = '배틀 타이틀을 입력해주세요';
   titleEl.focus();
   return false;
 }
@@ -236,13 +245,10 @@ export function initUI() {
     if (e.isComposing || e.keyCode === 229) return;  // IME safety (Korean composition)
     if (e.key === 'Enter') {
       e.preventDefault();
-      const val = nameInput.value.trim();
-      if (val) {
-        parseNames(val).forEach(n => addParticipant(n));
-        nameInput.value = '';
-      }
+      submitNameInput();
     }
   });
+  document.getElementById('name-submit').addEventListener('click', submitNameInput);
   nameInput.addEventListener('paste', () => {
     setTimeout(() => {
       const names = parseNames(nameInput.value);
@@ -283,12 +289,17 @@ export function initUI() {
   const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
   if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
 
+  // Mute toggle lives in two places (input page CTA + in-battle top-right);
+  // both buttons drive the same state and reflect the muted class together.
   const soundBtn = document.getElementById('sound-toggle');
-  soundBtn.addEventListener('click', () => {
+  const battleMuteBtn = document.getElementById('popup-toggle');
+  const muteButtons = [soundBtn, battleMuteBtn];
+  function toggleMute() {
     state.soundEnabled = !state.soundEnabled;
-    soundBtn.classList.toggle('muted', !state.soundEnabled);
-    soundBtn.title = state.soundEnabled ? 'Mute' : 'Unmute';
-
+    muteButtons.forEach(b => {
+      b.classList.toggle('muted', !state.soundEnabled);
+      b.title = state.soundEnabled ? 'Mute' : 'Unmute';
+    });
     if (state.soundEnabled) {
       ensureAudio();
       if (state.phase === 'battle') {
@@ -301,37 +312,34 @@ export function initUI() {
       stopEDM();
       stopSpinHum();
     }
-  });
+  }
+  soundBtn.addEventListener('click', toggleMute);
+  battleMuteBtn.addEventListener('click', toggleMute);
 
   document.getElementById('event-title').addEventListener('input', () => {
     // Clear the warning state as soon as the user starts typing.
     const titleEl = document.getElementById('event-title');
     if (titleEl.classList.contains('warn') && titleEl.value.trim()) {
       titleEl.classList.remove('warn');
-      titleEl.placeholder = 'Title';
+      titleEl.placeholder = '배틀 타이틀을 입력하세요';
     }
     saveToLocalStorage();
     syncTitleHud();
   });
 
-  // ── Popup mode (re-uses the setup panel as a mid-battle modal) ──
-  const popupToggle   = document.getElementById('popup-toggle');
+  // ── Popup-close wiring kept for safety, but the mid-battle entry point
+  // (the former gear button) has been repurposed to a mute toggle, so the
+  // popup no longer opens during battle. Close handlers stay in case a
+  // future flow re-introduces popup-open.
   const popupClose    = document.getElementById('popup-close');
   const popupBackdrop = document.getElementById('popup-backdrop');
   const setupPanel    = document.getElementById('setup-panel');
 
-  // Mid-battle: opening the settings popup auto-pauses; closing resumes.
-  // Outside battle (idle/result), the popup is just an editor — no pause logic.
-  const openPopup = () => {
-    document.body.classList.add('popup-open');
-    if (state.phase === 'battle') pauseBattle();
-  };
   const closePopup = () => {
     document.body.classList.remove('popup-open');
     if (state.phase === 'battle') resumeBattle();
   };
 
-  popupToggle.addEventListener('click', openPopup);
   popupClose.addEventListener('click', closePopup);
   popupBackdrop.addEventListener('click', closePopup);
 

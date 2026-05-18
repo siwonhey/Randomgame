@@ -18,7 +18,7 @@
   --c-accent-red:  #E63946;
 
   /* Single font family across the entire UI. */
-  --f-body: 'Hanken Grotesk', 'Inter', sans-serif;
+  --f-body: 'Noto Sans', 'Inter', sans-serif;
 }
 
 *, *::before, *::after {
@@ -352,8 +352,11 @@ body.popup-open #popup-close { display: flex; }
 .field-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
+/* Extra breathing room between TITLE and PARTICIPANTS so the two read as
+   distinct sections (without affecting the gap to the CTA row). */
+.field-block + .field-block { margin-top: 20px; }
 
 /* TITLE / PARTICIPANTS section labels — round-11 spec:
    smaller + wider letter-spacing so they read as caption-style labels and
@@ -363,7 +366,7 @@ body.popup-open #popup-close { display: flex; }
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 3px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.88);
   text-transform: uppercase;
   line-height: 1;
 }
@@ -415,13 +418,15 @@ body.popup-open #popup-close { display: flex; }
   position: absolute;
   bottom: calc(100% + 12px);
   left: 50%;
-  transform: translate(-50%, 6px);
+  /* Body shifted right by ~32px from the button center; the tail below is
+     pulled back by the same amount so it stays anchored over the button. */
+  transform: translate(calc(-50% + 32px), 6px);
   display: none;
   padding: 12px 28px 12px 14px;          /* right pad reserves space for × */
   background: rgba(46, 46, 50, 0.98);
   color: rgba(255,255,255,0.92);
   font-family: var(--f-body);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.2px;
   line-height: 1.4;
@@ -429,10 +434,9 @@ body.popup-open #popup-close { display: flex; }
   word-break: keep-all;
   overflow-wrap: normal;
   white-space: normal;
-  /* Width calibrated so the longer line ("참가자의 순서와 색상, 스택을")
-     stays on a single line; the explicit <br> in markup handles the 2-line
-     split, so this just needs to be wide enough not to wrap that line. */
-  width: 228px;
+  /* Width scaled with the font bump so the long Korean line still fits on a
+     single row without re-wrapping. */
+  width: 280px;
   text-align: left;
   border-radius: 10px;
   box-shadow: 0 10px 28px rgba(0,0,0,0.6);
@@ -445,7 +449,9 @@ body.popup-open #popup-close { display: flex; }
   content: '';
   position: absolute;
   top: 100%;
-  left: 50%;
+  /* Pull the tail back by the same 32px the body was shifted right so it
+     keeps pointing at the shuffle button regardless of the body offset. */
+  left: calc(50% - 32px);
   transform: translateX(-50%);
   width: 0;
   height: 0;
@@ -482,7 +488,7 @@ body.popup-open #popup-close { display: flex; }
 body.shuffle-hint-active #shuffle-hint {
   display: block;
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translate(calc(-50% + 32px), 0);
   pointer-events: auto;
 }
 
@@ -522,6 +528,7 @@ body.shuffle-hint-active #shuffle-hint {
   color: rgba(255,255,255,0.30);
   letter-spacing: 0.3px;
   font-weight: 500;
+  font-size: 16px;
 }
 #event-title.warn,
 #event-title.warn::placeholder { color: var(--c-accent-red); }
@@ -548,6 +555,33 @@ body.shuffle-hint-active #shuffle-hint {
   color: rgba(255,255,255,0.30);
   font-weight: 500;
   letter-spacing: 0.3px;
+  font-size: 16px;
+}
+
+/* Boxed enter/submit icon at the right end of the participant input row.
+   Lets users register the typed name with a click in addition to Enter key. */
+#name-submit {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+#name-submit:hover:not(:disabled) {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.32);
+}
+#name-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* Pill button — only the SHUFFLE control remains; lives inline in the
@@ -719,6 +753,7 @@ body.shuffle-hint-active #shuffle-hint {
 .roster-corner .participant {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   padding: 0 2px;
   height: 24px;
@@ -749,16 +784,18 @@ body.shuffle-hint-active #shuffle-hint {
   box-shadow: 0 0 6px currentColor;
 }
 .roster-corner .participant .name {
-  flex: 1;
+  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
 }
 
 .roster-corner .col-label {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: baseline;
+  gap: 10px;
   font-family: var(--f-body);
   font-size: 10px;
   font-weight: 500;
@@ -943,9 +980,10 @@ body.popup-open #title-hud { opacity: 0; }
   justify-content: center;
   z-index: 20;
   backdrop-filter: blur(8px);
-  /* Symmetric vertical padding so flex-centering hits the true viewport
-     midline; 60px clears the fixed brand mark at top: 28px. */
-  padding: 60px 24px;
+  /* Asymmetric vertical padding — extra bottom space shifts the flex-centered
+     content slightly above the viewport midline so the winner reads as the
+     focal point with breathing room below for the actions row. */
+  padding: 60px 24px 130px;
 }
 #result-overlay.show {
   display: flex;
@@ -960,8 +998,8 @@ body.popup-open #title-hud { opacity: 0; }
 }
 
 #result-3d {
-  width: 240px;
-  height: 240px;
+  width: 280px;
+  height: 280px;
   background: #000;
   border-radius: 4px;
   overflow: hidden;
@@ -988,7 +1026,7 @@ body.popup-open #title-hud { opacity: 0; }
   border: none;
   color: rgba(255, 255, 255, 0.55);
   font-family: var(--f-body);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 3px;
   line-height: 1;
@@ -1004,7 +1042,7 @@ body.popup-open #title-hud { opacity: 0; }
   margin-top: 4px;
   background: transparent;
   font-family: var(--f-body);
-  font-size: 36px;
+  font-size: 44px;
   font-weight: 700;
   color: var(--c-ink);
   letter-spacing: 0.5px;
@@ -1020,9 +1058,9 @@ body.popup-open #title-hud { opacity: 0; }
 }
 
 #result-list {
-  margin-top: 18px;
+  margin-top: 6px;
   background: transparent;
-  padding: 14px 0 0;
+  padding: 6px 0 0;
   /* Row of vertical columns — each column holds up to 8 names so the list
      can grow horizontally instead of scrolling vertically. */
   display: flex;
@@ -1036,6 +1074,7 @@ body.popup-open #title-hud { opacity: 0; }
 #result-list .result-column {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
   min-width: 0;
 }
@@ -1055,9 +1094,10 @@ body.popup-open #title-hud { opacity: 0; }
   font-size: 12px;
   font-weight: 400;
   color: rgba(255,255,255,0.50);
-  min-width: 28px;
-  text-align: right;
   letter-spacing: 0.4px;
+  /* No fixed width: the rank-tag flows with the name so each row's visual
+     center matches its geometric center, keeping the column aligned to the
+     winner spinner above. */
 }
 #result-list .result-name {
   font-weight: 600;
@@ -1066,7 +1106,7 @@ body.popup-open #title-hud { opacity: 0; }
 }
 
 .result-actions {
-  margin-top: 28px;
+  margin-top: 32px;
   display: flex;
   gap: 14px;
 }
@@ -1109,31 +1149,50 @@ body.popup-open #title-hud { opacity: 0; }
 /* ─────────────────────────────────────────────
    Popup mode (re-uses #setup-panel as a modal during battle)
    ───────────────────────────────────────────── */
+/* Top-right in-battle button — visually matches the input-page mute toggle
+   (#sound-toggle). Same square-rounded box, same speaker SVG, same .muted
+   × marks via the shared selectors below. */
 #popup-toggle {
   position: fixed;
   top: 28px;
-  /* Moved to top-right so the top-left slot is reserved for the brand block —
-     the logo is now always visible in non-popup states and acts as a
-     "return to setup" link via its click handler in ui.js. */
   right: 36px;
   z-index: 15;
   display: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 9999px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--c-ink);
-  font-size: 17px;
-  line-height: 1;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  overflow: visible;
 }
 #popup-toggle:hover {
-  border-color: var(--c-ink);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.32);
 }
+/* Muted state mirrors #sound-toggle: hide the wave arcs, draw a small ×. */
+#popup-toggle.muted { color: rgba(255,255,255,0.55); }
+#popup-toggle.muted svg path { display: none; }
+#popup-toggle.muted::before,
+#popup-toggle.muted::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 1.7px;
+  background: currentColor;
+  border-radius: 2px;
+  top: 50%;
+  right: 12px;
+  margin-top: -0.85px;
+  transform-origin: center;
+}
+#popup-toggle.muted::before { transform: rotate(45deg); }
+#popup-toggle.muted::after  { transform: rotate(-45deg); }
 
 /* Show ⚙ only during phases where the setup panel is hidden. The brand block
    now stays visible at top-left in every non-popup state so the user can
@@ -1312,12 +1371,12 @@ body[data-phase="result"] .brand-block {
   body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within { opacity: 1; }
 
   /* Result overlay: tighter spacing on mobile */
-  #result-3d { width: 200px; height: 200px; }
-  #result-winner-name { font-size: 28px; padding: 0 18px; }
-  #result-list { padding: 12px 0 0; min-width: 160px; gap: 18px; }
+  #result-3d { width: 232px; height: 232px; }
+  #result-winner-name { font-size: 34px; padding: 0 18px; }
+  #result-list { padding: 4px 0 0; min-width: 160px; gap: 18px; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
-  #popup-toggle { top: 22px; right: 22px; width: 34px; height: 34px; }
+  #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }
 }
 
 /* Mobile landscape — squeeze HUD vertically */
