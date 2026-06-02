@@ -1306,12 +1306,25 @@ body[data-phase="result"] .brand-block {
   }
   .brand-icon { height: 26px; width: auto; }
 
-  /* Setup panel scrolls vertically; the card sits below the brand chrome */
+  /* Setup panel scrolls vertically; the card sits below the brand chrome.
+     pointer-events must be auto so iOS touch events reach the scroll container.
+     Without this, pointer-events:none (set on desktop to not block canvas) also
+     blocks the touch tracking that drives momentum scroll on mobile. */
   #setup-panel {
-    padding: 0 16px 24px;
-    padding-top: 130px;
+    padding: 16px 16px 40px;
+    padding-top: 80px;
     align-items: flex-start;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    pointer-events: auto;
+  }
+  /* During active game phases the panel must not block canvas touches. */
+  body[data-phase="intro"] #setup-panel,
+  body[data-phase="countdown"] #setup-panel,
+  body[data-phase="battle"]:not(.popup-open) #setup-panel,
+  body[data-phase="result"] #setup-panel {
+    pointer-events: none;
   }
   .setup-card,
   .setup-card[data-cols="1"],
@@ -1336,6 +1349,10 @@ body[data-phase="result"] .brand-block {
   }
   .roster-card .participants-column { max-width: none; }
   .roster-card .participant .remove { opacity: 0.5; } /* always visible on touch */
+
+  /* Reduce CTA row margin on mobile; hint bubble still clears the roster
+     since it's absolutely positioned and overlays at a higher z-index. */
+  .cta-row { margin-top: 20px; }
 
   .primary-btn {
     height: 50px;
@@ -1387,7 +1404,7 @@ body[data-phase="result"] .brand-block {
 
 /* Mobile landscape — squeeze HUD vertically */
 @media (max-width: 767px) and (orientation: landscape) {
-  #setup-panel { padding-top: 80px; }
+  #setup-panel { padding-top: 60px; }
   #countdown { font-size: 56px; }
   #title-hud { top: 8px; font-size: 11px; letter-spacing: 2.5px; }
   #status-bar { top: 26px; font-size: 9.5px; }
