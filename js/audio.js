@@ -72,9 +72,11 @@ let edmPlaying = false;
 let edmNodes = [];
 let edmInterval = null;
 let edmMaster = null;
-let edmTargetVolume = 0.06;
+let edmTargetVolume = 0.12;
 let edmMode = 'idle';
-const EDM_VOLUME = { idle: 0.06, battle: 0.16 };
+// Idle (input-screen) BGM was 0.06 — so quiet it read as "no music". Bumped to
+// a clearly audible level; battle stays a touch louder for intensity.
+const EDM_VOLUME = { idle: 0.12, battle: 0.16 };
 
 // Smooth ramp the EDM bus gain — used to dim BGM on the result screen
 // without stopping/restarting the loop, then restore on reset.

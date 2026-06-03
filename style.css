@@ -1282,7 +1282,7 @@ body[data-phase="result"]    #setup-panel > .setup-card {
 body[data-phase="intro"]     .roster-corner,
 body[data-phase="countdown"] .roster-corner,
 body[data-phase="battle"]    .roster-corner {
-  opacity: 0.65;
+  opacity: 0.92;
   pointer-events: auto;
 }
 body[data-phase="intro"]     .roster-corner:hover,
@@ -1364,9 +1364,10 @@ body[data-phase="result"] .brand-block {
      Without this, pointer-events:none (set on desktop to not block canvas) also
      blocks the touch tracking that drives momentum scroll on mobile. */
   #setup-panel {
-    padding: 16px 16px 40px;
-    padding-top: 80px;
+    padding: 80px 16px 16px;
     align-items: flex-start;
+    /* Kept as a fallback for very short (landscape) viewports — in portrait the
+       card is height-capped to fit, so this never actually scrolls. */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
@@ -1384,28 +1385,56 @@ body[data-phase="result"] .brand-block {
   .setup-card[data-cols="2"],
   .setup-card[data-cols="3"] {
     max-width: 100%;
-    padding: 28px 24px 24px;
-    gap: 22px;
+    /* Cap the card to the viewport so the CTA buttons (mute / shuffle / START)
+       are ALWAYS visible without page scroll. The roster inside is the only
+       scrollable region (see below). */
+    max-height: calc(100dvh - 96px);
+    padding: 22px 22px 18px;
+    gap: 16px;
     border-radius: 16px;
+    overflow: hidden;
   }
 
   .field-label { font-size: 11px; letter-spacing: 2.5px; }
   #event-title { font-size: 18px; letter-spacing: 0.5px; }
   #name-input { font-size: 18px; }
 
-  .roster-card { height: 302px; }   /* 9 rows × 30px + 8 × 4px column gap */
-  .roster-card .participants { gap: 16px; }
+  /* The PARTICIPANTS block absorbs the card's leftover height; everything else
+     (TITLE, name input, CTA row) keeps its natural height and stays on screen. */
+  .field-block + .field-block {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;     /* card gap handles spacing; avoid double margin */
+  }
+
+  /* Roster flexes to fill remaining space and scrolls internally instead of a
+     fixed 302px block that pushed the buttons off-screen. The multi-column
+     layout is flattened to a single vertical list so adding participants grows
+     the list downward (scrollable) rather than spawning side columns that
+     overflow a narrow phone. */
+  .roster-card {
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;     /* yields space to keep the CTA row on screen first */
+    margin-top: 4px;
+  }
+  .roster-card .participants-wrap {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .roster-card .participants { flex-direction: column; gap: 0; }
+  .roster-card .participants-column { display: contents; }
   .roster-card .participant {
     font-size: 16px;
-    height: 30px;
+    height: 32px;
     letter-spacing: 0.55px;
   }
-  .roster-card .participants-column { max-width: none; }
   .roster-card .participant .remove { opacity: 0.5; } /* always visible on touch */
 
   /* Reduce CTA row margin on mobile; hint bubble still clears the roster
      since it's absolutely positioned and overlays at a higher z-index. */
-  .cta-row { margin-top: 20px; }
+  .cta-row { margin-top: 16px; }
 
   .primary-btn {
     height: 50px;
@@ -1419,10 +1448,13 @@ body[data-phase="result"] .brand-block {
     height: 50px;
     border-radius: 10px;
   }
-  /* Mobile keeps the same 2-line wrap — only typography tightens. */
+  /* Shrink the bubble to its text width (was a fixed 280px) so the close ×
+     sits right after the message instead of floating far off to the right. */
   #shuffle-hint {
     font-size: 11px;
-    padding: 10px 26px 10px 12px;
+    padding: 9px 24px 9px 12px;
+    width: auto;
+    max-width: min(80vw, 250px);
   }
 
   /* HUD adjustments */
@@ -1442,26 +1474,44 @@ body[data-phase="result"] .brand-block {
   .roster-corner .participants-wrap {
     max-height: calc(100vh - 100px);
   }
-  body[data-phase="battle"]:not(.popup-open) .roster-corner { opacity: 0.5; }
+  body[data-phase="battle"]:not(.popup-open) .roster-corner { opacity: 0.88; }
   body[data-phase="battle"]:not(.popup-open) .roster-corner:active,
   body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within { opacity: 1; }
 
-  /* Result overlay: same vertical stack as desktop, just scaled down. Balanced
-     padding (no heavy desktop bottom bias) so the winner block stays centered
-     on the visible viewport instead of drifting low. */
-  #result-overlay { padding: 40px 20px 48px; }
-  #result-3d { width: 232px; height: 232px; }
-  #result-winner-name { font-size: 34px; padding: 0 18px; }
-  #result-list { padding: 4px 0 0; min-width: 160px; gap: 18px; }
+  /* Result overlay — anchor the stack toward the top (it was drifting low) and
+     give it a clear visual hierarchy: the 3D spinner + WINNER + name read as
+     one hero unit, then a generous gap before the ranking list, then the
+     actions. Scrolls if the ranking list is long. */
+  #result-overlay {
+    justify-content: flex-start;
+    padding: 6vh 20px 28px;
+    overflow-y: auto;
+  }
+  #result-3d { width: 216px; height: 216px; }
+  .result-winner-block { margin-top: -6px; }
+  #result-title { font-size: 11px; letter-spacing: 2.5px; }
+  #result-winner-name { font-size: 33px; margin-top: 8px; padding: 0 16px; }
+  /* Graduated gaps create the hierarchy the cramped layout was missing. */
+  #result-list {
+    margin-top: 26px;
+    padding: 0;
+    gap: 14px 18px;
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .result-actions { margin-top: 30px; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
-  /* Small screens: cap participant-name width so names ≥ ~6 chars truncate
-     with an ellipsis instead of wrapping to a new row. ~6.5em ≈ 6 full-width
-     (Korean) characters at the mobile name font size. Applies everywhere a
-     name is listed: setup roster, in-battle corner HUD, and result ranking. */
-  .roster-card .participant .name { max-width: min(calc(100% - 44px), 6.5em); }
-  .roster-corner .participant .name { max-width: 6.5em; }
-  #result-list .result-name { max-width: 6.5em; }
+  /* Names: short names (≤ ~6 Korean chars) show in full; only longer ones get
+     an ellipsis. Columns must NOT shrink (flex-shrink: 0) — that squeeze was
+     truncating even 3-char names to a single glyph. Excess columns wrap to a
+     new row instead. */
+  #result-list .result-column { flex-shrink: 0; }
+  #result-list .result-name { max-width: 7em; }
+
+  /* Setup roster + battle HUD names still truncate long names on small screens. */
+  .roster-card .participant .name { max-width: min(calc(100% - 44px), 7em); }
+  .roster-corner .participant .name { max-width: 7em; }
 
   #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }
 }
