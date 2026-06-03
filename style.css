@@ -1310,6 +1310,17 @@ body[data-phase="result"]    #setup-panel > .setup-card {
   transform: translateY(-12px) scale(0.98);
   pointer-events: none;
 }
+/* The card's hidden roster still re-asserts pointer-events: auto via the shared
+   `.roster-block` rule, so it kept catching clicks in the *center* of the canvas
+   during battle — blocking click-to-pause there while clicks outside the card
+   region worked. Disable the embedded roster too (the popup editor re-enables it
+   via .popup-open; the corner HUD roster is a separate element, unaffected). */
+body[data-phase="intro"]                  #setup-panel .roster-card,
+body[data-phase="countdown"]              #setup-panel .roster-card,
+body[data-phase="battle"]:not(.popup-open) #setup-panel .roster-card,
+body[data-phase="result"]                 #setup-panel .roster-card {
+  pointer-events: none;
+}
 
 body[data-phase="intro"]     .roster-corner,
 body[data-phase="countdown"] .roster-corner,
@@ -1511,6 +1522,11 @@ body[data-phase="result"] .brand-block {
     transform: translate(-50%, -50%);
     font-size: 13px;
     letter-spacing: 3px;
+    /* Centered title must clear the top-left logo (~right edge 89px) and the
+       top-right mute button on narrow phones — a fixed 60vw overruns the logo
+       below ~445px wide. This obstacle-aware cap keeps the title between them,
+       clipping long titles with the inherited ellipsis instead. */
+    max-width: calc(100vw - 210px);
   }
   #status-bar { top: 60px; font-size: 10px; letter-spacing: 1.5px; }
   #timer-display { top: 84px; font-size: 18px; }
@@ -1578,7 +1594,10 @@ body[data-phase="result"] .brand-block {
     max-width: 100%;
   }
 
-  .result-actions { margin-top: 16px; flex-shrink: 0; }
+  /* Wider gap above the actions row: it shrinks the flex list (fewer rows
+     visible before it scrolls) and secures clear whitespace so COPY / PLAY
+     AGAIN don't read as part of the ranking list. */
+  .result-actions { margin-top: 36px; flex-shrink: 0; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
   /* Names ≤ ~6 Korean chars show fully; only longer names get an ellipsis. */
