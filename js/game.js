@@ -9,22 +9,15 @@ import { spawnParticles, clearParticles } from './particles.js';
 import {
   playBeep, playElimination, playVictory, playWhoosh,
   startSpinHum, stopSpinHum, startEDM, setEDMVolume, setEDMMode, ensureAudio, unlockAudio,
+  BGM_VOLUME,
 } from './audio.js';
-
-
-
-
-// BGM volume profile — input/battle plays at full, result dims for the jingle.
-const BGM_VOL_FULL   = 0.12;
-const BGM_VOL_RESULT = 0.05;
-const BGM_VOL_PAUSE  = 0.03;
 
 const pauseIndicator = document.getElementById('pause-indicator');
 
 export function pauseBattle() {
   if (state.phase !== 'battle' || state.paused) return;
   pausePhysics();
-  setEDMVolume(BGM_VOL_PAUSE, 0.25);
+  setEDMVolume(BGM_VOLUME.pause, 0.25);
   if (pauseIndicator) pauseIndicator.classList.add('show');
 }
 
@@ -190,7 +183,7 @@ function endBattle(winner) {
   setPhase('result');
   state.rankings.unshift(winner);
   stopSpinHum();
-  setEDMVolume(BGM_VOL_RESULT, 0.6);
+  setEDMVolume(BGM_VOLUME.result, 0.6);
 
   setCameraMode('result', { winner });
   spotLight.intensity = 2.5;
@@ -265,8 +258,8 @@ export function resetGame() {
   state.paused = false;
   if (pauseIndicator) pauseIndicator.classList.remove('show');
   stopSpinHum();
-  // Keep BGM playing across reset; just bring it back up to full volume.
-  setEDMVolume(BGM_VOL_FULL, 0.4);
+  // Keep BGM playing across reset; just bring it back up to the idle level.
+  setEDMVolume(BGM_VOLUME.idle, 0.4);
   startEDM('idle');
   spotLight.intensity = 0;
 

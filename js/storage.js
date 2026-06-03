@@ -5,7 +5,11 @@ export function saveToLocalStorage() {
     participants: state.participants.map(p => p.name),
     eventTitle: document.getElementById('event-title').value,
   };
-  localStorage.setItem('metalBlade', JSON.stringify(data));
+  try {
+    localStorage.setItem('metalBlade', JSON.stringify(data));
+  } catch {
+    /* private mode / quota — persistence is best-effort, ignore */
+  }
 }
 
 export function loadFromLocalStorage(addParticipant) {

@@ -74,9 +74,11 @@ let edmInterval = null;
 let edmMaster = null;
 let edmTargetVolume = 0.12;
 let edmMode = 'idle';
-// Idle (input-screen) BGM was 0.06 — so quiet it read as "no music". Bumped to
-// a clearly audible level; battle stays a touch louder for intensity.
-const EDM_VOLUME = { idle: 0.12, battle: 0.16 };
+// Single source of truth for BGM gain levels (idle/battle are the EDM loop
+// modes; result/pause are dim levels the game flow ramps to). Idle was 0.06 —
+// so quiet it read as "no music" — bumped to clearly audible; battle a touch
+// louder for intensity.
+export const BGM_VOLUME = { idle: 0.12, battle: 0.16, result: 0.05, pause: 0.03 };
 
 // Smooth ramp the EDM bus gain — used to dim BGM on the result screen
 // without stopping/restarting the loop, then restore on reset.
@@ -91,7 +93,7 @@ export function setEDMVolume(vol, rampSeconds = 0.4) {
 
 export function setEDMMode(mode) {
   edmMode = mode === 'battle' ? 'battle' : 'idle';
-  edmTargetVolume = EDM_VOLUME[edmMode];
+  edmTargetVolume = BGM_VOLUME[edmMode];
   if (edmPlaying) {
     setEDMVolume(edmTargetVolume, 0.4);
   }
@@ -99,7 +101,7 @@ export function setEDMMode(mode) {
 
 export function startEDM(mode = 'idle') {
   edmMode = mode === 'battle' ? 'battle' : 'idle';
-  edmTargetVolume = EDM_VOLUME[edmMode];
+  edmTargetVolume = BGM_VOLUME[edmMode];
   if (!state.soundEnabled) return;
   if (edmPlaying) {
     setEDMMode(edmMode);

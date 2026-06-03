@@ -546,6 +546,9 @@ body.shuffle-hint-active #shuffle-hint {
   position: relative;
   width: 100%;
   height: 56px;
+  /* Hold the box height — these are flex items inside the height-capped card,
+     so without this they get compressed on short screens / as the roster grows. */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.06);
@@ -554,7 +557,9 @@ body.shuffle-hint-active #shuffle-hint {
   padding: 0 16px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.name-input-row { gap: 10px; padding: 0 8px 0 16px; }
+/* right pad = the + circle's vertical inset ((56−2border−28)/2 = 13px) so its
+   top/bottom/right spacing inside the box is equal. Mobile re-tunes for h=50. */
+.name-input-row { gap: 10px; padding: 0 13px 0 16px; }
 
 .input-box:hover,
 .name-input-row:hover { border-color: rgba(255, 255, 255, 0.18); }
@@ -690,7 +695,9 @@ body.shuffle-hint-active #shuffle-hint {
    exactly one full column so no internal scroll appears. PER_COL = 9 (set
    in JS): items 1-9 left column, 10-18 next, 19-27 next, 28-30 next. */
 .roster-card {
-  margin-top: 8px;
+  /* Small offset only — the field-block's 12px gap already separates the name
+     box from the list; keep box↔list tight (~14px total) as before. */
+  margin-top: 2px;
   width: 100%;
   height: 338px;          /* 9 rows × 34px + 8 × 4px column gap */
   position: relative;     /* anchor for the custom scroll indicator */
@@ -706,6 +713,10 @@ body.shuffle-hint-active #shuffle-hint {
   gap: 24px;
   width: 100%;
   align-items: flex-start;
+  /* Indent the list to the input box's text inset (16px) so the participant
+     dots share a left edge with the typed name above, reading as content
+     nested under the PARTICIPANTS label (which stays flush at the card edge). */
+  padding-left: 16px;
 }
 /* Column width grows with the doubled participant font so names don't get
    chopped at the ellipsis. */
@@ -1464,6 +1475,8 @@ body[data-phase="result"] .brand-block {
   /* Match the mobile START GAME button (height 50 / radius 10). */
   .input-box,
   .name-input-row { height: 50px; border-radius: 10px; }
+  /* right pad = circle's vertical inset at h=50 ((50−2−28)/2 = 10px). */
+  .name-input-row { padding-right: 10px; }
 
   /* The PARTICIPANTS block absorbs the card's leftover height; everything else
      (TITLE, name input, CTA row) keeps its natural height and stays on screen. */
@@ -1484,7 +1497,7 @@ body[data-phase="result"] .brand-block {
     height: auto;
     flex: 1 1 auto;
     min-height: 0;     /* yields space to keep the CTA row on screen first */
-    margin-top: 4px;
+    margin-top: 0;     /* field-block gap already handles box↔list spacing */
   }
   .roster-card .participants-wrap {
     overflow-y: auto;          /* styled below so the bar stays resident, not touch-only */
@@ -1526,12 +1539,18 @@ body[data-phase="result"] .brand-block {
      max-content keeps it to a single line (≤ 2 once it hits the max-width cap),
      and the close × sits right after the text. */
   #shuffle-hint {
-    font-size: 11px;
-    padding: 9px 26px 9px 12px;
+    font-size: 13px;
+    padding: 10px 28px 10px 13px;
     width: max-content;
-    max-width: min(82vw, 260px);
-    line-height: 1.35;
+    max-width: min(84vw, 270px);
+    line-height: 1.4;
   }
+  /* While the first-run shuffle hint is showing, shrink the roster scroll area
+     so the bubble (which pops up above the shuffle button) lands in clear space
+     and doesn't cover participant names. Tuned to clear a 2-line bubble while
+     keeping the names↔bubble gap tight. Reverts the moment the hint's close ×
+     is pressed — no permanent loss of list height. */
+  body.shuffle-hint-active .roster-card { margin-bottom: 60px; }
 
   /* HUD adjustments — align the title/REMAINING stack with the mute button
      (#popup-toggle: top 22px, 44px tall → vertical center ≈ 44px). The title

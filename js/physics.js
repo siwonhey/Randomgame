@@ -4,7 +4,7 @@
 // to elimination and impact events without importing game.js directly.
 // ═══════════════════════════════════════════
 import { state } from './state.js';
-import { STADIUM_RADIUS, BATTLE_TIME_LIMIT, PHYSICS_SCALE, cryptoRandom } from './config.js';
+import { STADIUM_RADIUS, BATTLE_TIME_LIMIT, cryptoRandom } from './config.js';
 
 const Matter = window.Matter;
 const { Engine, Body, Events } = Matter;
