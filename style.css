@@ -1429,8 +1429,12 @@ body[data-phase="result"] .brand-block {
     font-size: 16px;
     height: 32px;
     letter-spacing: 0.55px;
+    gap: 8px;          /* tighter so the × sits right after the name/ellipsis */
   }
-  .roster-card .participant .remove { opacity: 0.5; } /* always visible on touch */
+  .roster-card .participant .remove {
+    opacity: 0.5;      /* always visible on touch */
+    margin-left: 2px;  /* hug the name (… ) instead of drifting right */
+  }
 
   /* Reduce CTA row margin on mobile; hint bubble still clears the roster
      since it's absolutely positioned and overlays at a higher z-index. */
@@ -1448,13 +1452,17 @@ body[data-phase="result"] .brand-block {
     height: 50px;
     border-radius: 10px;
   }
-  /* Shrink the bubble to its text width (was a fixed 280px) so the close ×
-     sits right after the message instead of floating far off to the right. */
+  /* Size the bubble to its text (width: max-content) rather than `auto` — an
+     absolutely-positioned `auto` collapses to the 50px shuffle button width,
+     which wrapped the message into many narrow lines that covered the roster.
+     max-content keeps it to a single line (≤ 2 once it hits the max-width cap),
+     and the close × sits right after the text. */
   #shuffle-hint {
     font-size: 11px;
-    padding: 9px 24px 9px 12px;
-    width: auto;
-    max-width: min(80vw, 250px);
+    padding: 9px 26px 9px 12px;
+    width: max-content;
+    max-width: min(82vw, 260px);
+    line-height: 1.35;
   }
 
   /* HUD adjustments */
@@ -1491,26 +1499,27 @@ body[data-phase="result"] .brand-block {
   .result-winner-block { margin-top: -6px; }
   #result-title { font-size: 11px; letter-spacing: 2.5px; }
   #result-winner-name { font-size: 33px; margin-top: 8px; padding: 0 16px; }
-  /* Graduated gaps create the hierarchy the cramped layout was missing. */
+  /* Single vertical column on mobile. The multi-column layout squeezed columns
+     on a narrow phone, truncating even 3-char names to a single glyph. A single
+     centered column gives every row full width, so ≤ ~6-char names ALWAYS show
+     in full; the list scrolls within the overlay when it's long. margin-top
+     gives the rankings clear separation from the winner (hierarchy). */
   #result-list {
     margin-top: 26px;
     padding: 0;
-    gap: 14px 18px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 7px;
     max-width: 100%;
   }
+  #result-list .result-column { display: contents; }
   .result-actions { margin-top: 30px; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
-  /* Names: short names (≤ ~6 Korean chars) show in full; only longer ones get
-     an ellipsis. Columns must NOT shrink (flex-shrink: 0) — that squeeze was
-     truncating even 3-char names to a single glyph. Excess columns wrap to a
-     new row instead. */
-  #result-list .result-column { flex-shrink: 0; }
+  /* Names ≤ ~6 Korean chars show fully; only longer names get an ellipsis. */
   #result-list .result-name { max-width: 7em; }
-
-  /* Setup roster + battle HUD names still truncate long names on small screens. */
-  .roster-card .participant .name { max-width: min(calc(100% - 44px), 7em); }
+  .roster-card .participant .name { max-width: 7em; }
   .roster-corner .participant .name { max-width: 7em; }
 
   #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }

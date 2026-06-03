@@ -55,8 +55,12 @@ const resultOverlay = document.getElementById('result-overlay');
 const resultList = document.getElementById('result-list');
 const gameArea = document.getElementById('game-area');
 
+// Listen on several gesture types so the first interaction of any kind resumes
+// the AudioContext and starts the BGM (covers touch, mouse, and keyboard).
 window.addEventListener('pointerdown', unlockAudio);
 window.addEventListener('keydown', unlockAudio);
+window.addEventListener('touchstart', unlockAudio);
+window.addEventListener('click', unlockAudio);
 
 let onUIUpdate = () => {};
 let onInputsLock = () => {};

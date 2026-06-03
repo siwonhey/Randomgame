@@ -291,23 +291,30 @@ export function stopSpinHum() {
   spinGain = null;
 }
 
-export function unlockAudio() {
-  if (audioUnlocked) return;
-
-  ensureAudio();
-
-  audioUnlocked = true;
-
-  // Kick the BGM the moment we have a user gesture. Browser autoplay policy
-  // keeps the context suspended until now, so this is the first point music
-  // can actually play. We start it explicitly here (in addition to the
-  // statechange path inside startEDM) so a returning context that resumes
-  // synchronously — without firing statechange — still gets the loop going.
-  // startEDM() guards on edmPlaying, so a double-call is a no-op.
-  const kick = () => { if (state.soundEnabled && !edmPlaying) startEDM(edmMode); };
-  if (audioCtx.state === 'running') kick();
-  else audioCtx.resume().then(kick).catch(() => { /* noop */ });
-
+function detachUnlock() {
   window.removeEventListener('pointerdown', unlockAudio);
   window.removeEventListener('keydown', unlockAudio);
+  window.removeEventListener('touchstart', unlockAudio);
+  window.removeEventListener('click', unlockAudio);
+}
+
+export function unlockAudio() {
+  ensureAudio();
+
+  // Start the BGM as soon as the context is actually running. Browser autoplay
+  // policy keeps it 'suspended' until a user gesture resumes it, so this is the
+  // first point music can play. We DON'T early-return on a flag: if resume()
+  // hasn't taken effect yet (state still 'suspended'), we leave the listeners
+  // attached and retry on the next gesture — only detaching once we've
+  // confirmed the context is running. startEDM() guards on edmPlaying, so
+  // repeated calls are harmless.
+  const tryStart = () => {
+    if (audioCtx.state !== 'running') return;
+    if (state.soundEnabled && !edmPlaying) startEDM(edmMode);
+    audioUnlocked = true;
+    detachUnlock();
+  };
+
+  if (audioCtx.state === 'running') tryStart();
+  else audioCtx.resume().then(tryStart).catch(() => { /* retry next gesture */ });
 }
