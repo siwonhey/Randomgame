@@ -99,6 +99,9 @@ body[data-landing="active"] #card-entrance-gradient {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* Reserve space at the bottom so the flex-centered logo + "Loading…" block
+     sits a bit above the true vertical midline (it read as slightly low). */
+  padding-bottom: 12vh;
   background: #000;
   transition: opacity 0.6s ease;
 }
@@ -983,7 +986,16 @@ body.popup-open #title-hud { opacity: 0; }
    ───────────────────────────────────────────── */
 #result-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Match the visible viewport (dvh) so the flex-centered content sits on the
+     true on-screen midline. With a plain 100vh the overlay extends behind the
+     mobile browser chrome, pushing the centered winner block visually downward
+     (it centers in the taller 100vh box, not the shorter visible area). dvh
+     equals 100vh on desktop, so the desktop result layout is unchanged. */
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.94);
   display: none;
   flex-direction: column;
@@ -1120,6 +1132,12 @@ body.popup-open #title-hud { opacity: 0; }
   color: rgba(255,255,255,0.92);
   letter-spacing: 0.5px;
   text-align: left;
+  /* Keep each ranked name on a single row — long names truncate with an
+     ellipsis instead of wrapping and breaking the column rhythm. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .result-actions {
@@ -1317,6 +1335,30 @@ body[data-phase="result"] .brand-block {
   }
   .brand-icon { height: 26px; width: auto; }
 
+  /* While the setup card scrolls, its participant text passes behind the fixed
+     top-left logo and the two overlap confusingly. A fixed dark gradient strip
+     at the top of the viewport sits above the scrolling card (z-index 10) but
+     below the logo (z-index 14), so the logo stays legible and any text
+     scrolling underneath fades into darkness. Only shown when the setup panel
+     is the active view (idle input or the during-battle popup editor). */
+  body[data-phase="idle"]::before,
+  body.popup-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 88px;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.7)  45%,
+      rgba(0, 0, 0, 0)    100%
+    );
+    z-index: 13;
+    pointer-events: none;
+  }
+
   /* Setup panel scrolls vertically; the card sits below the brand chrome.
      pointer-events must be auto so iOS touch events reach the scroll container.
      Without this, pointer-events:none (set on desktop to not block canvas) also
@@ -1404,11 +1446,22 @@ body[data-phase="result"] .brand-block {
   body[data-phase="battle"]:not(.popup-open) .roster-corner:active,
   body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within { opacity: 1; }
 
-  /* Result overlay: tighter spacing on mobile */
+  /* Result overlay: same vertical stack as desktop, just scaled down. Balanced
+     padding (no heavy desktop bottom bias) so the winner block stays centered
+     on the visible viewport instead of drifting low. */
+  #result-overlay { padding: 40px 20px 48px; }
   #result-3d { width: 232px; height: 232px; }
   #result-winner-name { font-size: 34px; padding: 0 18px; }
   #result-list { padding: 4px 0 0; min-width: 160px; gap: 18px; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
+
+  /* Small screens: cap participant-name width so names ≥ ~6 chars truncate
+     with an ellipsis instead of wrapping to a new row. ~6.5em ≈ 6 full-width
+     (Korean) characters at the mobile name font size. Applies everywhere a
+     name is listed: setup roster, in-battle corner HUD, and result ranking. */
+  .roster-card .participant .name { max-width: min(calc(100% - 44px), 6.5em); }
+  .roster-corner .participant .name { max-width: 6.5em; }
+  #result-list .result-name { max-width: 6.5em; }
 
   #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }
 }

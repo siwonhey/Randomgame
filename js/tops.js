@@ -193,29 +193,16 @@ export function createTop3D(color, scale = BASE_SCALE) {
   // ⑥ Radial gradient overlay — bright top-left, dark rim, gives the jelly
   //    disc its 3D dome reading.
   const radial = dctx.createRadialGradient(0, -10, 0, 0, 0, 88);
-  radial.addColorStop(0,   'rgba(255, 255, 255, 0.40)');
-  radial.addColorStop(0.5, 'rgba(255, 255, 255, 0.06)');
+  // Toned-down central highlight (was 0.40) — keeps a soft dome sheen with the
+  // dark rim, but without the pale white wash that made the top face look hazy.
+  radial.addColorStop(0,   'rgba(255, 255, 255, 0.18)');
+  radial.addColorStop(0.5, 'rgba(255, 255, 255, 0.04)');
   radial.addColorStop(1,   'rgba(0, 0, 0, 0.45)');
   dctx.fillStyle = radial;
   dctx.globalAlpha = 1;
   dctx.beginPath();
   dctx.arc(0, 0, 88, 0, Math.PI * 2);
   dctx.fill();
-
-  // ⑦ 8 gauge ticks (was 12). 4 long at cardinals + 4 short at intermediates.
-  //    Lengths bumped ~13% so the ticks survive rotation blur.
-  dctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const longer = i % 2 === 0;
-    const r1 = longer ? 67 : 74;   // was 70/76 in v1
-    const r2 = 86;
-    dctx.lineWidth = longer ? 2.2 : 1.4;
-    dctx.beginPath();
-    dctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
-    dctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
-    dctx.stroke();
-  }
 
   // ⑧ Hub step — a darker disc behind the emblem, plus a bright outline,
   //    so the central area reads as a small recessed platform.
@@ -258,17 +245,12 @@ export function createTop3D(color, scale = BASE_SCALE) {
   drawStar();
   dctx.stroke();
 
-  // ⑪ Center beads (white over color).
-  dctx.fillStyle = '#ffffff';
-  dctx.globalAlpha = 0.85;
-  dctx.beginPath();
-  dctx.arc(0, 0, 5, 0, Math.PI * 2);
-  dctx.fill();
-
+  // ⑪ Center bead — body color (was white), so the handle-mount center reads
+  //    as part of the body instead of a pale white dot.
   dctx.fillStyle = hexStr;
   dctx.globalAlpha = 1;
   dctx.beginPath();
-  dctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+  dctx.arc(0, 0, 5, 0, Math.PI * 2);
   dctx.fill();
 
   dctx.restore();
@@ -303,9 +285,11 @@ export function createTop3D(color, scale = BASE_SCALE) {
   }
 
   // ── Core glow ──
+  // Body-colored (was white) — this sphere sits exactly where the handle meets
+  // the disc, so a white core gave the connection a pale, washed-out look.
   const core = new THREE.Mesh(
     sharedCoreGeo,
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c, emissiveIntensity: 0.9 })
+    new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.9 })
   );
   core.position.y = discCenterY + 0.02;
   group.add(core);

@@ -296,6 +296,16 @@ export function unlockAudio() {
 
   audioUnlocked = true;
 
+  // Kick the BGM the moment we have a user gesture. Browser autoplay policy
+  // keeps the context suspended until now, so this is the first point music
+  // can actually play. We start it explicitly here (in addition to the
+  // statechange path inside startEDM) so a returning context that resumes
+  // synchronously — without firing statechange — still gets the loop going.
+  // startEDM() guards on edmPlaying, so a double-call is a no-op.
+  const kick = () => { if (state.soundEnabled && !edmPlaying) startEDM(edmMode); };
+  if (audioCtx.state === 'running') kick();
+  else audioCtx.resume().then(kick).catch(() => { /* noop */ });
+
   window.removeEventListener('pointerdown', unlockAudio);
   window.removeEventListener('keydown', unlockAudio);
 }

@@ -137,9 +137,29 @@ export function updateCinematicCamera(activeTops) {
         cx /= active.length; cz /= active.length;
         const span = Math.max(maxX - minX, maxZ - minZ, 2);
         const lowAngle = active.length <= 3;
-        const camY = lowAngle ? LOW_ANGLE_Y : 6 + span * 0.8;
-        const camZ = cz + (lowAngle ? span * 1.2 + 3.8 : span * 0.9 + 5);
+        let camY = lowAngle ? LOW_ANGLE_Y : 6 + span * 0.8;
+        let camZ = cz + (lowAngle ? span * 1.2 + 3.8 : span * 0.9 + 5);
         const targetY = lowAngle ? 0.3 : 0;
+
+        // Aspect-aware horizontal fit. The heuristic above frames well on wide
+        // (desktop) viewports, but a perspective camera's horizontal FOV is
+        // tan(vFov/2)·aspect — on portrait phones (aspect < 1) that's far
+        // narrower than vertical, so tops spread along X get cropped. Pull the
+        // camera straight back along its view direction until the full X-spread
+        // fits with a margin. On wide screens needDist < curDist, so this is a
+        // no-op and desktop framing is unchanged.
+        const halfSpanX = Math.max((maxX - minX) / 2, 1);
+        const vHalfTan  = Math.tan((camera.fov * Math.PI / 180) / 2);
+        const hHalfTan  = vHalfTan * (camera.aspect || 1);
+        const needDist  = (halfSpanX * 1.18) / hHalfTan;          // 18% edge margin
+        const dx        = cx * 0.4 - cx;                          // camera X offset from target
+        const curDist   = Math.hypot(dx, camY - targetY, camZ - cz);
+        if (curDist > 0.001 && needDist > curDist) {
+          const k = needDist / curDist;
+          camY = targetY + (camY - targetY) * k;
+          camZ = cz + (camZ - cz) * k;
+        }
+
         const speed = lowAngle ? 0.04 : 0.025;
         tmp.set(cx * 0.4, camY, camZ);  // pull X toward center for stability
         camera.position.lerp(tmp, speed);
