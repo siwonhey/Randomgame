@@ -54,7 +54,9 @@ function updateThumb({ scroller, host, thumb }) {
   const trackH = ch;
   const thumbH = Math.max(28, (ch / sh) * trackH);
   const maxThumbTravel = trackH - thumbH;
-  const scrolled = scroller.scrollTop / (sh - ch);          // 0 → 1
+  // Clamp to [0,1] so touch overscroll (iOS rubber-band drives scrollTop
+  // negative or past the max) can't push the thumb outside its track.
+  const scrolled = Math.min(1, Math.max(0, scroller.scrollTop / (sh - ch))); // 0 → 1
 
   thumb.style.height = `${thumbH}px`;
   thumb.style.top = `${relTop + scrolled * maxThumbTravel}px`;

@@ -244,23 +244,27 @@ body[data-landing="active"] .setup-card {
    awkward single-line slash. */
 #sound-toggle.muted { color: rgba(255,255,255,0.55); }
 #sound-toggle.muted svg path { display: none; }
-#sound-toggle.muted::before,
+/* × drawn as ONE element filled with currentColor and masked into an X, so the
+   two diagonals never paint over each other. Two translucent crossing bars used
+   to stack alpha at the center, exposing the overlap; here the mask only gates
+   visibility, so the fill stays a uniform 0.55. Sits on the right of the SVG
+   where the sound waves were, not slashing through the speaker. */
 #sound-toggle.muted::after {
   content: '';
   position: absolute;
-  width: 10px;
-  height: 1.7px;
-  background: currentColor;
-  border-radius: 2px;
   top: 50%;
-  /* Centers the × on the right side of the SVG where the sound waves used
-     to live, instead of slashing through the speaker. */
-  right: 12px;
-  margin-top: -0.85px;
-  transform-origin: center;
+  right: 13px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  background: currentColor;
+  -webkit-mask:
+    linear-gradient(45deg, transparent 43%, #000 43%, #000 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, #000 43%, #000 57%, transparent 57%);
+          mask:
+    linear-gradient(45deg, transparent 43%, #000 43%, #000 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, #000 43%, #000 57%, transparent 57%);
 }
-#sound-toggle.muted::before { transform: rotate(45deg); }
-#sound-toggle.muted::after  { transform: rotate(-45deg); }
 
 /* START GAME row: mute toggle + shuffle icon + primary CTA. Extra top margin
    buys vertical room above the row so the SHUFFLE first-visit hint bubble
@@ -390,11 +394,13 @@ body.popup-open #popup-close { display: flex; }
 .field-block {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  /* Space between a section label (TITLE / PARTICIPANTS) and its input box. */
+  gap: 12px;
 }
-/* Extra breathing room between TITLE and PARTICIPANTS so the two read as
-   distinct sections (without affecting the gap to the CTA row). */
-.field-block + .field-block { margin-top: 20px; }
+/* Breathing room between TITLE and PARTICIPANTS. Adds to the card's own gap
+   (32px) → ~36px total; the previous 20px made the two sections read too far
+   apart on desktop. Mobile re-tunes this below (card gap is only 16px there). */
+.field-block + .field-block { margin-top: 4px; }
 
 /* TITLE / PARTICIPANTS section labels — round-11 spec:
    smaller + wider letter-spacing so they read as caption-style labels and
@@ -531,79 +537,91 @@ body.shuffle-hint-active #shuffle-hint {
 }
 
 /* ── TITLE / PARTICIPANT NAME inputs ──
-   Flush-left inputs with a dotted underline as a "fill-in-the-blank" cue —
-   reads as an editable field without the heaviness of a solid hairline.
-   Hover slightly intensifies; focus replaces the dotted line with a solid
-   line + subtle brightening to confirm the active state. */
-#event-title,
+   Boxed fields: same height + corner radius as the START GAME button, with a
+   fill slightly lighter than the card (and clearly darker than the white text)
+   so each reads as an inset box instead of the old underline. .input-box and
+   .name-input-row are position: relative to anchor the custom placeholder. */
+.input-box,
 .name-input-row {
+  position: relative;
   width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
-  padding: 6px 0 8px;
-  transition: border-bottom-color 0.2s ease, border-bottom-style 0.2s ease;
-}
-#event-title:hover,
-.name-input-row:hover {
-  border-bottom-color: rgba(255, 255, 255, 0.35);
-}
-#event-title:focus,
-.name-input-row:focus-within {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
-}
-
-#event-title {
-  display: block;
-  color: var(--c-ink);
-  font-family: var(--f-body);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  outline: none;
-}
-#event-title::placeholder {
-  color: rgba(255,255,255,0.30);
-  letter-spacing: 0.3px;
-  font-weight: 500;
-  font-size: 16px;
-}
-#event-title.warn,
-#event-title.warn::placeholder { color: var(--c-accent-red); }
-#event-title.warn { border-bottom-color: rgba(230, 57, 70, 0.55); }
-
-.name-input-row {
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 0 16px;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
+.name-input-row { gap: 10px; padding: 0 8px 0 16px; }
+
+.input-box:hover,
+.name-input-row:hover { border-color: rgba(255, 255, 255, 0.18); }
+.input-box:focus-within,
+.name-input-row:focus-within {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.30);
+}
+/* Title required-but-empty warning (set by validateTitle). */
+.input-box:has(#event-title.warn) { border-color: rgba(230, 57, 70, 0.55); }
+
+#event-title,
 #name-input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
+  /* appearance reset + line-height: 1 remove the UA text inputs' built-in
+     vertical metrics so the text sits on the box's true center (iOS Safari
+     otherwise nudges it slightly low). */
+  -webkit-appearance: none;
+          appearance: none;
   color: var(--c-ink);
   font-family: var(--f-body);
   font-size: 20px;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: 0.3px;
   padding: 0;
   outline: none;
 }
-#name-input::placeholder {
-  color: rgba(255,255,255,0.30);
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  font-size: 16px;
-}
+/* Native placeholder hidden — the styled .field-ph overlay replaces it so the
+   leading phrase stays bold while the rest is regular weight. */
+#event-title::placeholder,
+#name-input::placeholder { color: transparent; }
 
-/* Boxed enter/submit icon at the right end of the participant input row.
-   Lets users register the typed name with a click in addition to Enter key. */
+/* Custom placeholder: bold lead phrase + regular tail. Shown only while the
+   field is empty (input still showing its placeholder). */
+.field-ph {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.34);
+  font-family: var(--f-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.field-ph b { font-weight: 700; color: rgba(255, 255, 255, 0.52); }
+#event-title:not(:placeholder-shown) ~ .field-ph,
+#name-input:not(:placeholder-shown) ~ .field-ph { opacity: 0; }
+#event-title.warn ~ .field-ph,
+#event-title.warn ~ .field-ph b { color: var(--c-accent-red); }
+
+/* + button at the right of the participant row — a small circle (smaller than
+   the row), keeping the plus glyph centered inside. */
 #name-submit {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.06);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.10);
   border: 1px solid rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.85);
   cursor: pointer;
@@ -613,7 +631,7 @@ body.shuffle-hint-active #shuffle-hint {
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
 }
 #name-submit:hover:not(:disabled) {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.18);
   color: #fff;
   border-color: rgba(255,255,255,0.32);
 }
@@ -1242,24 +1260,26 @@ body.popup-open #title-hud { opacity: 0; }
   color: #fff;
   border-color: rgba(255,255,255,0.32);
 }
-/* Muted state mirrors #sound-toggle: hide the wave arcs, draw a small ×. */
+/* Muted state mirrors #sound-toggle: hide the wave arcs, draw a small × as a
+   single masked element so its diagonals don't overlap-stack alpha. */
 #popup-toggle.muted { color: rgba(255,255,255,0.55); }
 #popup-toggle.muted svg path { display: none; }
-#popup-toggle.muted::before,
 #popup-toggle.muted::after {
   content: '';
   position: absolute;
-  width: 10px;
-  height: 1.7px;
-  background: currentColor;
-  border-radius: 2px;
   top: 50%;
-  right: 12px;
-  margin-top: -0.85px;
-  transform-origin: center;
+  right: 13px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  background: currentColor;
+  -webkit-mask:
+    linear-gradient(45deg, transparent 43%, #000 43%, #000 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, #000 43%, #000 57%, transparent 57%);
+          mask:
+    linear-gradient(45deg, transparent 43%, #000 43%, #000 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, #000 43%, #000 57%, transparent 57%);
 }
-#popup-toggle.muted::before { transform: rotate(45deg); }
-#popup-toggle.muted::after  { transform: rotate(-45deg); }
 
 /* Show ⚙ only during phases where the setup panel is hidden. The brand block
    now stays visible at top-left in every non-popup state so the user can
@@ -1441,13 +1461,18 @@ body[data-phase="result"] .brand-block {
   .field-label { font-size: 11px; letter-spacing: 2.5px; }
   #event-title { font-size: 18px; letter-spacing: 0.5px; }
   #name-input { font-size: 18px; }
+  /* Match the mobile START GAME button (height 50 / radius 10). */
+  .input-box,
+  .name-input-row { height: 50px; border-radius: 10px; }
 
   /* The PARTICIPANTS block absorbs the card's leftover height; everything else
      (TITLE, name input, CTA row) keeps its natural height and stays on screen. */
   .field-block + .field-block {
     flex: 1 1 auto;
     min-height: 0;
-    margin-top: 0;     /* card gap handles spacing; avoid double margin */
+    /* Card gap is only 16px on mobile — too tight between the two sections.
+       Add to it for ~28px total (closer to the desktop separation). */
+    margin-top: 12px;
   }
 
   /* Roster flexes to fill remaining space and scrolls internally instead of a

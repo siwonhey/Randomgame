@@ -232,13 +232,19 @@ function shuffleParticipants() {
 // keystroke. Reference: REDESIGN_0510 §1-2 — "타이틀 미 입력시 경고 메시지".
 function validateTitle() {
   const titleEl = document.getElementById('event-title');
+  // The visible placeholder is the styled .field-ph overlay (native placeholder
+  // is transparent), so swap its regular-weight tail too — the bold "배틀 타이틀"
+  // lead stays put.
+  const tail = document.querySelector('.input-box .ph-tail');
   if (titleEl.value.trim()) {
     titleEl.classList.remove('warn');
     titleEl.placeholder = '배틀 타이틀을 입력하세요';
+    if (tail) tail.textContent = '을 입력하세요';
     return true;
   }
   titleEl.classList.add('warn');
   titleEl.placeholder = '배틀 타이틀을 입력해주세요';
+  if (tail) tail.textContent = '을 입력해주세요';
   titleEl.focus();
   return false;
 }

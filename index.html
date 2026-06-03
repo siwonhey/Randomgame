@@ -68,7 +68,10 @@
       <!-- TITLE field -->
       <div class="field-block">
         <label class="field-label" for="event-title">TITLE</label>
-        <input type="text" id="event-title" placeholder="배틀 타이틀을 입력하세요" spellcheck="false" autocomplete="off">
+        <div class="input-box">
+          <input type="text" id="event-title" placeholder="배틀 타이틀을 입력하세요" spellcheck="false" autocomplete="off">
+          <span class="field-ph" aria-hidden="true"><b>배틀 타이틀</b><span class="ph-tail">을 입력하세요</span></span>
+        </div>
       </div>
 
       <!-- PARTICIPANTS field -->
@@ -78,11 +81,12 @@
         </div>
 
         <div class="name-input-row">
-          <input type="text" id="name-input" placeholder="참가자의 이름을 입력하세요" spellcheck="false" autocomplete="off">
+          <input type="text" id="name-input" placeholder="참가자 이름을 입력하세요" spellcheck="false" autocomplete="off">
+          <span class="field-ph" aria-hidden="true"><b>참가자 이름</b>을 입력하세요</span>
           <button id="name-submit" type="button" title="Add participant" aria-label="Add participant">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="9 10 4 15 9 20"></polyline>
-              <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
           </button>
         </div>
