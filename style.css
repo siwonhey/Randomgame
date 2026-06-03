@@ -1075,16 +1075,22 @@ body.popup-open #title-hud { opacity: 0; }
   line-height: 1.1;
   padding: 0 24px;
   text-align: center;
-  max-width: min(80vw, 480px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: min(90vw, 640px);
+  /* The winner name must never be cut. Wrap long names to multiple lines
+     instead of truncating; keep-all avoids breaking inside Korean 어절, and
+     overflow-wrap: anywhere is a fallback for a single very long token. */
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   animation: fadeIn 0.6s ease backwards;
   animation-delay: 0.2s;
 }
 
 #result-list {
-  margin-top: 6px;
+  /* Larger gap below the winner so the 3D spinner + winner name read as a hero
+     unit pushed up, with the ranking list clearly separated beneath. (Centered
+     overlay → a bigger gap lifts the hero and drops the rankings.) */
+  margin-top: 28px;
   background: transparent;
   padding: 6px 0 0;
   /* Row of vertical columns — each column holds up to 8 names so the list
@@ -1465,11 +1471,14 @@ body[data-phase="result"] .brand-block {
     line-height: 1.35;
   }
 
-  /* HUD adjustments */
+  /* HUD adjustments — align the title/REMAINING stack with the mute button
+     (#popup-toggle: top 22px, 44px tall → vertical center ≈ 44px). The title
+     was sitting ~18px too high; shift the whole stack down so the title centers
+     on the mute row, with the timer following beneath. */
   #countdown { font-size: 84px; }
-  #title-hud { top: 18px; font-size: 13px; letter-spacing: 3px; }
-  #status-bar { top: 40px; font-size: 10px; letter-spacing: 1.5px; }
-  #timer-display { top: 64px; font-size: 18px; }
+  #title-hud { top: 37px; font-size: 13px; letter-spacing: 3px; }
+  #status-bar { top: 59px; font-size: 10px; letter-spacing: 1.5px; }
+  #timer-display { top: 83px; font-size: 18px; }
 
   /* Corner roster on mobile — narrow single column anchored to the right */
   .roster-corner {
@@ -1486,41 +1495,47 @@ body[data-phase="result"] .brand-block {
   body[data-phase="battle"]:not(.popup-open) .roster-corner:active,
   body[data-phase="battle"]:not(.popup-open) .roster-corner:focus-within { opacity: 1; }
 
-  /* Result overlay — anchor the stack toward the top (it was drifting low) and
-     give it a clear visual hierarchy: the 3D spinner + WINNER + name read as
-     one hero unit, then a generous gap before the ranking list, then the
-     actions. Scrolls if the ranking list is long. */
+  /* Result fits the viewport like the input card: the 3D spinner, WINNER name,
+     and action buttons are fixed; ONLY the ranking list scrolls — so REPLAY /
+     COPY RESULTS stay on screen no matter how many participants there are. */
   #result-overlay {
     justify-content: flex-start;
-    padding: 6vh 20px 28px;
-    overflow-y: auto;
+    padding: 2vh 16px 18px;     /* nudge the hero (3D + winner) up a touch */
+    overflow: hidden;
   }
-  #result-3d { width: 216px; height: 216px; }
-  .result-winner-block { margin-top: -6px; }
+  .result-content {
+    width: 100%;
+    max-height: 100%;     /* fit the overlay's content box; list scrolls inside */
+  }
+  #result-3d { width: 200px; height: 200px; flex-shrink: 0; }
+  .result-winner-block { margin-top: -6px; flex-shrink: 0; }
   #result-title { font-size: 11px; letter-spacing: 2.5px; }
-  #result-winner-name { font-size: 33px; margin-top: 8px; padding: 0 16px; }
-  /* Single vertical column on mobile. The multi-column layout squeezed columns
-     on a narrow phone, truncating even 3-char names to a single glyph. A single
-     centered column gives every row full width, so ≤ ~6-char names ALWAYS show
-     in full; the list scrolls within the overlay when it's long. margin-top
-     gives the rankings clear separation from the winner (hierarchy). */
+  #result-winner-name { font-size: 30px; margin-top: 8px; padding: 0 14px; }
+
+  /* Ranking list: fixed-width rows centered as a block (so the whole list is
+     centered, not left-skewed) with rank + name sharing one left edge. The
+     fixed row width also gives names a definite parent so they never collapse
+     to a single glyph / blank — ≤ ~6-char names always show in full. */
   #result-list {
-    margin-top: 26px;
-    padding: 0;
+    margin-top: 24px;     /* clearer separation between the hero and rankings */
+    padding: 2px 0;
     flex-direction: column;
     flex-wrap: nowrap;
-    /* Rank + name share one left edge (left-aligned rows), and the whole block
-       is centered under the winner via result-content's align-items: center. */
-    align-items: flex-start;
-    /* Definite width (sized to the widest row) — without it the centered,
-       shrink-to-fit list collapsed its rows to min-content, blanking/clipping
-       names. */
-    width: max-content;
-    max-width: calc(100vw - 40px);
-    gap: 7px;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    flex: 0 1 auto;       /* shrinks to fit so the actions row stays visible */
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   #result-list .result-column { display: contents; }
-  .result-actions { margin-top: 30px; }
+  #result-list .result-item {
+    width: 11em;          /* rank (32px) + gap + 7em name → consistent columns */
+    max-width: 100%;
+  }
+
+  .result-actions { margin-top: 16px; flex-shrink: 0; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
   /* Names ≤ ~6 Korean chars show fully; only longer names get an ellipsis. */
