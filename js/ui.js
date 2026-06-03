@@ -161,7 +161,13 @@ export function updateRankingsUI() {
 export function syncTitleHud() {
   const titleEl = document.getElementById('event-title');
   const hud = document.getElementById('title-hud');
-  if (titleEl && hud) hud.textContent = titleEl.value || '';
+  if (!titleEl || !hud) return;
+  // Cap the in-arena HUD label at 10 chars (+ ellipsis) so a long title can't
+  // grow into the top-left logo or top-right mute button on narrow screens.
+  // copyResults() reads the raw input value, so the copied report keeps the
+  // full title the user typed.
+  const value = titleEl.value || '';
+  hud.textContent = value.length > 10 ? `${value.slice(0, 10)}…` : value;
 }
 
 function copyResults() {

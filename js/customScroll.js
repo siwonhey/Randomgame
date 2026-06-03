@@ -12,18 +12,14 @@
 
 const instances = [];
 
-export function attachCustomScrollbar(scroller, host, opts = {}) {
+export function attachCustomScrollbar(scroller, host) {
   if (!scroller || !host) return null;
 
   const thumb = document.createElement('div');
   thumb.className = 'cscroll-thumb';
   host.appendChild(thumb);
 
-  const inst = {
-    scroller, host, thumb,
-    contentSelector: opts.contentSelector || null,
-    contentPad: opts.contentPad ?? 8,
-  };
+  const inst = { scroller, host, thumb };
   inst.update = () => updateThumb(inst);
 
   scroller.addEventListener('scroll', inst.update, { passive: true });
@@ -40,7 +36,7 @@ export function attachCustomScrollbar(scroller, host, opts = {}) {
   return inst;
 }
 
-function updateThumb({ scroller, host, thumb, contentSelector, contentPad }) {
+function updateThumb({ scroller, host, thumb }) {
   const sh = scroller.scrollHeight;
   const ch = scroller.clientHeight;
 
@@ -62,26 +58,7 @@ function updateThumb({ scroller, host, thumb, contentSelector, contentPad }) {
 
   thumb.style.height = `${thumbH}px`;
   thumb.style.top = `${relTop + scrolled * maxThumbTravel}px`;
-
-  // Horizontal: by default the thumb hugs the scroller's right edge like a
-  // normal scrollbar. When a contentSelector is given (the result ranking
-  // list, whose rows are fixed-width with short names left-floating in empty
-  // space), anchor the thumb just past the widest row's *actual* content
-  // instead — so it sits right next to the names regardless of name length and
-  // reads as the list's own scroll, not a far-right bar near the buttons.
-  let leftPx = relLeft + scrRect.width - 7;
-  if (contentSelector) {
-    let maxRight = 0;
-    scroller.querySelectorAll(contentSelector).forEach((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.right > maxRight) maxRight = r.right;
-    });
-    if (maxRight > 0) {
-      // Clamp so the anchored thumb never spills past the scroller's edge.
-      leftPx = Math.min((maxRight - hostRect.left) + contentPad, leftPx);
-    }
-  }
-  thumb.style.left = `${leftPx}px`;
+  thumb.style.left = `${relLeft + scrRect.width - 7}px`;
   thumb.classList.add('visible');
 }
 

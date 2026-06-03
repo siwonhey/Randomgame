@@ -133,7 +133,6 @@ attachCustomScrollbar(
 attachCustomScrollbar(
   document.getElementById('result-list'),
   document.querySelector('.result-content'),
-  { contentSelector: '.result-name', contentPad: 10 },
 );
 
 runLandingSplash();
