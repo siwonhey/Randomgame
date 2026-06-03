@@ -1509,9 +1509,15 @@ body[data-phase="result"] .brand-block {
     padding: 0;
     flex-direction: column;
     flex-wrap: nowrap;
-    align-items: center;
+    /* Rank + name share one left edge (left-aligned rows), and the whole block
+       is centered under the winner via result-content's align-items: center. */
+    align-items: flex-start;
+    /* Definite width (sized to the widest row) — without it the centered,
+       shrink-to-fit list collapsed its rows to min-content, blanking/clipping
+       names. */
+    width: max-content;
+    max-width: calc(100vw - 40px);
     gap: 7px;
-    max-width: 100%;
   }
   #result-list .result-column { display: contents; }
   .result-actions { margin-top: 30px; }
