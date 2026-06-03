@@ -284,7 +284,18 @@ body[data-landing="active"] #game-area {
    ───────────────────────────────────────────── */
 #setup-panel {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Height tracks the *visible* viewport (dvh) rather than 100vh so the scroll
+     area excludes mobile browser chrome (address bar / home indicator). With a
+     plain 100vh this container is taller than what's actually on-screen, so
+     when the card nearly fills the viewport the bottom CTA row (mute / shuffle /
+     START GAME) sits behind the chrome with no scroll offered — the buttons
+     read as "cut off". dvh makes the panel scroll to reach them. It equals
+     100vh on desktop, so the desktop layout is unchanged. */
+  height: 100vh;
+  height: 100dvh;
   z-index: 10;
   display: flex;
   align-items: center;
