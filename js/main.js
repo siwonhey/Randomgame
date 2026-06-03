@@ -12,6 +12,7 @@ import { updateCinematicCamera, getCamTarget } from './camera.js';
 import { updateSpinHum, ensureAudio, startEDM } from './audio.js';
 import { initUI, renderParticipants, addParticipant, syncTitleHud } from './ui.js';
 import { loadFromLocalStorage } from './storage.js';
+import { attachCustomScrollbar } from './customScroll.js';
 
 const timerDisplay = document.getElementById('timer-display');
 let frameCount = 0;
@@ -121,6 +122,19 @@ initUI();
 renderParticipants();
 loadFromLocalStorage(addParticipant);
 syncTitleHud();                          // pick up the loaded event title
+
+// Custom scroll indicators: input roster (grows as participants are added) and
+// the result ranking list. They appear automatically once the content overflows
+// and stay visible while scrollable (unlike the iOS touch-only overlay bar).
+attachCustomScrollbar(
+  document.querySelector('.roster-card .participants-wrap'),
+  document.querySelector('.roster-card'),
+);
+attachCustomScrollbar(
+  document.getElementById('result-list'),
+  document.querySelector('.result-content'),
+);
+
 runLandingSplash();
 animate();
 

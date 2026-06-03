@@ -45,6 +45,22 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
 
+/* Custom scroll indicator (js/customScroll.js) — a thin thumb drawn on the
+   right edge of the input roster / result list. Appears only when the list
+   overflows and stays visible while scrollable (the native iOS overlay bar is
+   touch-only and fades, so users couldn't tell the list scrolled). */
+.cscroll-thumb {
+  position: absolute;
+  width: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 4;
+}
+.cscroll-thumb.visible { opacity: 1; }
+
 #app {
   position: relative;
   width: 100vw;
@@ -659,6 +675,7 @@ body.shuffle-hint-active #shuffle-hint {
   margin-top: 8px;
   width: 100%;
   height: 338px;          /* 9 rows × 34px + 8 × 4px column gap */
+  position: relative;     /* anchor for the custom scroll indicator */
 }
 .roster-card .participants-wrap {
   width: 100%;
@@ -1026,6 +1043,7 @@ body.popup-open #title-hud { opacity: 0; }
   flex-direction: column;
   align-items: center;
   gap: 0;
+  position: relative;   /* anchor for the custom scroll indicator */
 }
 
 #result-3d {
@@ -1543,10 +1561,15 @@ body[data-phase="result"] .brand-block {
     flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
-    width: 100%;
+    /* Sized to its rows (fixed-width items) and centered by result-content, so
+       the custom scroll indicator lands at the list's right edge — right next
+       to the names — instead of way out at the page edge like a page scrollbar. */
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;         /* override the desktop min-width so the list hugs its rows */
     flex: 0 1 auto;       /* shrinks to fit so the actions row stays visible */
     min-height: 0;
-    overflow-y: auto;     /* styled below so the bar stays resident, not touch-only */
+    overflow-y: auto;     /* native bar hidden; custom indicator drawn instead */
     overflow-x: hidden;
   }
   #result-list .result-column { display: contents; }
@@ -1563,29 +1586,16 @@ body[data-phase="result"] .brand-block {
   .roster-card .participant .name { max-width: 7em; }
   .roster-corner .participant .name { max-width: 7em; }
 
-  /* Persistent scrollbar on the long lists so users can SEE that there's more
-     to scroll, instead of relying on the touch-only overlay scrollbar that
-     fades away. Styling ::-webkit-scrollbar with an explicit width forces a
-     resident (non-overlay) bar on mobile webkit; scrollbar-color covers Firefox. */
+  /* Hide the native scrollbar on these scrollers — the custom indicator
+     (js/customScroll.js) replaces it so the "there's more below" affordance is
+     visible even on iOS (whose native overlay bar is touch-only and fades). */
   .roster-card .participants-wrap,
   #result-list {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.45) rgba(255,255,255,0.10);
+    scrollbar-width: none;            /* Firefox */
   }
   .roster-card .participants-wrap::-webkit-scrollbar,
   #result-list::-webkit-scrollbar {
-    -webkit-appearance: none;
-    width: 6px;
-  }
-  .roster-card .participants-wrap::-webkit-scrollbar-thumb,
-  #result-list::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.45);
-    border-radius: 3px;
-  }
-  .roster-card .participants-wrap::-webkit-scrollbar-track,
-  #result-list::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.10);
-    border-radius: 3px;
+    display: none;                    /* WebKit */
   }
 
   #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }

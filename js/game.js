@@ -43,6 +43,7 @@ export function togglePauseBattle() {
 }
 import { setMode as setCameraMode, onImpact as cameraImpact } from './camera.js';
 import { showWinner, hideWinner } from './resultScene.js';
+import { refreshScrollbars } from './customScroll.js';
 
 const Matter = window.Matter;
 const { Composite } = Matter;
@@ -250,6 +251,10 @@ function showResult() {
     }
     resultList.appendChild(colEl);
   }
+
+  // The overlay just became visible — re-measure the scroll indicator so it
+  // shows immediately if the ranking list overflows (don't wait for a scroll).
+  requestAnimationFrame(refreshScrollbars);
 }
 
 // ── Reset ──
