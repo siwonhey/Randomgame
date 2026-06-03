@@ -308,10 +308,18 @@ body[data-landing="active"] #game-area {
      card on the viewport's vertical midline. */
   padding: 80px 24px;
   pointer-events: none;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.35s ease, background-color 0.5s ease;
   overflow-y: auto;
 }
 #setup-panel > * { pointer-events: auto; }
+
+/* On the input screen the panel paints an opaque dark fill so the 3D game
+   stage isn't visible behind the setup card. It's gated to the idle phase, so
+   the moment a battle starts the fill fades out (background-color transition on
+   #setup-panel) and the arena is revealed for the intro. */
+body[data-phase="idle"] #setup-panel {
+  background-color: #000;
+}
 
 .setup-card {
   position: relative;
@@ -1425,7 +1433,7 @@ body[data-phase="result"] .brand-block {
     margin-top: 4px;
   }
   .roster-card .participants-wrap {
-    overflow-y: auto;
+    overflow-y: auto;          /* styled below so the bar stays resident, not touch-only */
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
   }
@@ -1476,9 +1484,18 @@ body[data-phase="result"] .brand-block {
      was sitting ~18px too high; shift the whole stack down so the title centers
      on the mute row, with the timer following beneath. */
   #countdown { font-size: 84px; }
-  #title-hud { top: 37px; font-size: 13px; letter-spacing: 3px; }
-  #status-bar { top: 59px; font-size: 10px; letter-spacing: 1.5px; }
-  #timer-display { top: 83px; font-size: 18px; }
+  /* Vertically center the title on the mute button's row. The mute button
+     (#popup-toggle: top 22px, 44px tall) is centered at y≈44px; translateY(-50%)
+     centers the title box there regardless of its line height, so it lines up
+     exactly instead of sitting a few px low. */
+  #title-hud {
+    top: 44px;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    letter-spacing: 3px;
+  }
+  #status-bar { top: 60px; font-size: 10px; letter-spacing: 1.5px; }
+  #timer-display { top: 84px; font-size: 18px; }
 
   /* Corner roster on mobile — narrow single column anchored to the right */
   .roster-corner {
@@ -1500,7 +1517,10 @@ body[data-phase="result"] .brand-block {
      COPY RESULTS stay on screen no matter how many participants there are. */
   #result-overlay {
     justify-content: flex-start;
-    padding: 2vh 16px 18px;     /* nudge the hero (3D + winner) up a touch */
+    /* Larger bottom padding gives the COPY / PLAY AGAIN row breathing room so it
+       never sits flush against the screen edge when the list fills the height.
+       (The list shrinks/scrolls to fit, so this padding is always honored.) */
+    padding: 2vh 16px 30px;     /* top: nudge the hero (3D + winner) up a touch */
     overflow: hidden;
   }
   .result-content {
@@ -1526,7 +1546,7 @@ body[data-phase="result"] .brand-block {
     width: 100%;
     flex: 0 1 auto;       /* shrinks to fit so the actions row stays visible */
     min-height: 0;
-    overflow-y: auto;
+    overflow-y: auto;     /* styled below so the bar stays resident, not touch-only */
     overflow-x: hidden;
   }
   #result-list .result-column { display: contents; }
@@ -1542,6 +1562,31 @@ body[data-phase="result"] .brand-block {
   #result-list .result-name { max-width: 7em; }
   .roster-card .participant .name { max-width: 7em; }
   .roster-corner .participant .name { max-width: 7em; }
+
+  /* Persistent scrollbar on the long lists so users can SEE that there's more
+     to scroll, instead of relying on the touch-only overlay scrollbar that
+     fades away. Styling ::-webkit-scrollbar with an explicit width forces a
+     resident (non-overlay) bar on mobile webkit; scrollbar-color covers Firefox. */
+  .roster-card .participants-wrap,
+  #result-list {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.45) rgba(255,255,255,0.10);
+  }
+  .roster-card .participants-wrap::-webkit-scrollbar,
+  #result-list::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 6px;
+  }
+  .roster-card .participants-wrap::-webkit-scrollbar-thumb,
+  #result-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.45);
+    border-radius: 3px;
+  }
+  .roster-card .participants-wrap::-webkit-scrollbar-track,
+  #result-list::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.10);
+    border-radius: 3px;
+  }
 
   #popup-toggle { top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 10px; }
 }
