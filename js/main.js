@@ -77,44 +77,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// ── Landing splash ──
-// Reference REDESIGN_0510 §1-1: the LOGO.mp4 animation plays once on page
-// load (not on Restart from the result page — that's a normal in-app reset
-// that doesn't reload). We mark <body data-landing="active"> while the splash
-// is up so the brand block, sound toggle, setup card, and corner roster all
-// stay invisible until the splash fades. Hidden when the video reports
-// `ended`; falls back to a timeout if the video can't play (autoplay block,
-// missing file, decode error).
-const LANDING_FALLBACK_MS = 4000;
-function runLandingSplash() {
-  const splash = document.getElementById('landing-splash');
-  if (!splash) return;
-  document.body.dataset.landing = 'active';
-
-  const dismiss = () => {
-    if (splash.dataset.dismissed) return;
-    splash.dataset.dismissed = '1';
-    splash.classList.add('hidden');
-    delete document.body.dataset.landing;
-    setTimeout(() => splash.remove(), 700);
-  };
-
-  const video = document.getElementById('landing-logo');
-  if (video && typeof video.addEventListener === 'function') {
-    video.playbackRate = 1.5;
-    video.addEventListener('ended', dismiss, { once: true });
-    video.addEventListener('error', dismiss, { once: true });
-    // Some browsers reject autoplay silently — kick off play and dismiss
-    // immediately on rejection so the splash doesn't stick.
-    const playPromise = video.play && video.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(dismiss);
-    }
-  }
-
-  setTimeout(dismiss, LANDING_FALLBACK_MS);
-}
-
 // ── Init ──
 setPhase('idle');                       // mirror to <body data-phase="idle">
 onResize();
@@ -135,15 +97,13 @@ attachCustomScrollbar(
   document.querySelector('.result-content'),
 );
 
-runLandingSplash();
 animate();
 
-// BGM is scheduled as soon as the page loads so it starts during the landing
-// splash whenever the browser permits it (returning visitors past Chrome's
-// Media Engagement threshold, or any case where the user has clicked on the
-// page before the splash finishes). If autoplay is blocked, startEDM defers
-// the actual scheduling via a statechange listener — it kicks in the instant
-// the AudioContext resumes, which happens on the first user gesture handled
-// by unlockAudio() (bound in game.js on window pointerdown/keydown).
+// BGM is scheduled as soon as the page loads so it starts whenever the browser
+// permits it (returning visitors past Chrome's Media Engagement threshold, or
+// any case where the user has already interacted with the page). If autoplay is
+// blocked, startEDM defers the actual scheduling via a statechange listener — it
+// kicks in the instant the AudioContext resumes, which happens on the first user
+// gesture handled by unlockAudio() (bound in game.js on window pointerdown/keydown).
 ensureAudio();
 startEDM('idle');

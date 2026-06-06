@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>body{background:#1c1c1f;margin:0;width:390px;}#app{position:static;}#setup-panel{position:static;display:block;opacity:1;padding:40px 16px;}.setup-card{width:358px !important;max-width:358px !important;}</style>
+</head>
+<body class="shuffle-hint-active">
+<div id="app">
+  <section id="setup-panel">
+    <div class="setup-card">
+      <div class="cta-row">
+        <button id="sound-toggle" class="muted"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
+        <div class="shuffle-wrap">
+          <button id="shuffle-btn"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line></svg></button>
+          <div id="shuffle-hint" role="tooltip">
+            <span class="hint-text">참가자의 순서와 색상, 스택을 한 번에 섞어요</span>
+            <button class="hint-close">&times;</button>
+          </div>
+        </div>
+        <button id="battle-btn" class="primary-btn">START GAME</button>
+      </div>
+    </div>
+  </section>
+</div>
+</body></html>

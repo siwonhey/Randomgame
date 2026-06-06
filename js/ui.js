@@ -42,7 +42,19 @@ function setInputsDisabled(disabled) {
   document.querySelectorAll('.roster-block .remove').forEach(b => { b.disabled = disabled; });
 }
 
+// Roster-full warning: same treatment as the TITLE 10-char warning — light up
+// .limit-warn on the field-block (red label hint + red input border).
+function setParticipantLimitWarning(on) {
+  const block = nameInput.closest('.field-block');
+  if (block) block.classList.toggle('limit-warn', on);
+}
+
 function submitNameInput() {
+  if (state.participants.length >= MAX_PARTICIPANTS) {
+    nameInput.value = '';
+    setParticipantLimitWarning(true);
+    return;
+  }
   const val = nameInput.value.trim();
   if (!val) return;
   parseNames(val).forEach(n => addParticipant(n));
@@ -70,6 +82,8 @@ function removeParticipant(name) {
   removeTopPhysics(name);
   repositionTops();
   renderParticipants();
+  // Back under the cap → clear any "max reached" notice on the name input.
+  if (state.participants.length < MAX_PARTICIPANTS) setParticipantLimitWarning(false);
   saveToLocalStorage();
 }
 
@@ -81,7 +95,10 @@ function removeParticipant(name) {
 export function renderParticipants() {
   const eliminatedNames = state.rankings.map(r => r.name);
   const eliminatedSet = new Set(eliminatedNames);
-  const activeParticipants = state.participants.filter(p => !eliminatedSet.has(p.name));
+  // Newest entry on top: participants are stored oldest→newest (push order), so
+  // reverse for display. (.filter returns a fresh array, so this doesn't mutate
+  // state.participants — physics/colors keep their original add order.)
+  const activeParticipants = state.participants.filter(p => !eliminatedSet.has(p.name)).reverse();
 
   const total = state.participants.length;
   const rows = [];
@@ -144,9 +161,6 @@ export function renderParticipants() {
     });
   });
 
-  // HUD corner: current participant count only (max is implied by the cap).
-  const hudCount = `${state.participants.length}`;
-  document.querySelectorAll('.count-display-hud').forEach(el => { el.textContent = hudCount; });
   battleBtn.disabled = state.participants.length < 2 || state.phase !== 'idle';
   document.getElementById('shuffle-btn').disabled = state.participants.length < 2 || state.phase !== 'idle';
 }
@@ -162,41 +176,36 @@ export function syncTitleHud() {
   const titleEl = document.getElementById('event-title');
   const hud = document.getElementById('title-hud');
   if (!titleEl || !hud) return;
-  // Cap the in-arena HUD label at 10 chars (+ ellipsis) so a long title can't
-  // grow into the top-left logo or top-right mute button on narrow screens.
-  // copyResults() reads the raw input value, so the copied report keeps the
-  // full title the user typed.
-  const value = titleEl.value || '';
-  hud.textContent = value.length > 10 ? `${value.slice(0, 10)}…` : value;
+  // Show the full title; CSS clips it to the gap between the top-left logo and
+  // the top-right mute button (equal margins, … ellipsis on overflow) so it can
+  // never grow into either, regardless of length.
+  hud.textContent = titleEl.value || '';
 }
 
 function copyResults() {
   const title = document.getElementById('event-title').value || 'BLITZ BATTLE';
+  const ranked = state.rankings;
+  if (!ranked.length) return;
+  const winner = ranked[0];
+  const losers = ranked.slice(1);
 
-  let text = `╔${'═'.repeat(28)}╗\n`;
-  text += `   ✦ BLITZ : BATTLE REPORT ✦\n`;
-  text += `╚${'═'.repeat(28)}╝\n`;
-  text += ` 📢 [ ${title} ]\n`;
-  text += ` ───\n`;
-  text += `  REDEFINING THE EXPERIENCE OF RANDOM SELECTION\n`;
-  text += ` ───\n\n`;
+  let text = ` ─── BLITZ : BATTLE REPORT ${'─'.repeat(23)}\n\n`;
+  text += ` 📄 NOTE\n`;
+  text += ` ${title}\n\n`;
+  text += ` 🏆 WINNER ── ${winner.name}\n\n`;
 
-  state.rankings.forEach((top, i) => {
-    let prefix;
-    if (i === 0) prefix = '  🏆  WINNER : ';
-    else if (i === 1) prefix = '  🥈  2nd : ';
-    else if (i === 2) prefix = '  🥉  3rd : ';
-    else prefix = `   ${i + 1}. `;
-    text += `${prefix}${top.name}\n`;
-    if (i === 0) text += '\n';
-  });
+  // Losers in a single top-down list, ranks zero-padded (02., 03., …) so the
+  // winner reads as 1st implicitly.
+  if (losers.length) {
+    losers.forEach((p, i) => {
+      text += ` ${String(i + 2).padStart(2, '0')}. ${p.name}\n`;
+    });
+    text += `\n`;
+  }
 
-  text += `\n ──────────────────────────────\n`;
-  text += `  DRIVEN BY PHYSICS, EXPLORE THE ARC.`;
-  text += `\n ──────────────────────────────\n`;
-  text += `  🎮 GAME: BLITZ\n`;
-  text += `  🔗 LINK: https://randomgame-7pg4.vercel.app/\n`;
-  text += ` ──────────────────────────────\n`;
+  text += ` ${'─'.repeat(49)}\n`;
+  text += ` 🎮 REDEFINING THE EXPERIENCE OF RANDOM SELECTION\n`;
+  text += ` 👉 [Play BLITZ Now](https://randomgame-7pg4.vercel.app/)\n`;
 
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btn-copy');
@@ -253,6 +262,12 @@ export function initUI() {
   setUIUpdateCallback(updateRankingsUI);
   setInputsLockCallback(setInputsDisabled);
 
+  // Clicking/focusing the name field while the roster is already full warns
+  // immediately (the field can't accept more), not only on submit.
+  nameInput.addEventListener('focus', () => {
+    if (state.participants.length >= MAX_PARTICIPANTS) setParticipantLimitWarning(true);
+  });
+
   nameInput.addEventListener('keydown', (e) => {
     if (e.isComposing || e.keyCode === 229) return;  // IME safety (Korean composition)
     if (e.key === 'Enter') {
@@ -267,6 +282,8 @@ export function initUI() {
       if (names.length > 1) {
         names.forEach(n => addParticipant(n));
         nameInput.value = '';
+        // Some pasted names may have been dropped at the cap — surface it.
+        if (state.participants.length >= MAX_PARTICIPANTS) setParticipantLimitWarning(true);
       }
     }, 0);
   });
@@ -296,8 +313,11 @@ export function initUI() {
   // First-visit hint above the SHUFFLE icon. Per user feedback, only the
   // explicit × button on the bubble dismisses it — pressing SHUFFLE itself
   // (or starting a battle) does NOT close the bubble. Not persisted to
-  // storage — refresh re-arms it (same lifecycle as the landing splash).
+  // storage — a page refresh re-arms it.
   document.body.classList.add('shuffle-hint-active');
+  // Auto-dismiss 10s after the user lands on the setup screen (the × button
+  // still dismisses it earlier). Fades out via the bubble's opacity transition.
+  setTimeout(dismissShuffleHint, 10000);
   const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
   if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
 
@@ -328,13 +348,30 @@ export function initUI() {
   soundBtn.addEventListener('click', toggleMute);
   battleMuteBtn.addEventListener('click', toggleMute);
 
-  document.getElementById('event-title').addEventListener('input', () => {
+  // TITLE is capped at 10 chars (maxlength blocks the actual input). When the
+  // user tries to type past the cap, flash the red "10자 이내로 작성해주세요" hint
+  // beside the label. beforeinput catches the attempt across IME + keyboard; we
+  // ignore deletions and selection-replacements (those stay within the cap).
+  const TITLE_MAX = 10;
+  const titleInput = document.getElementById('event-title');
+  const titleBlock = titleInput.closest('.field-block');
+  titleInput.addEventListener('beforeinput', (e) => {
+    const inserting = e.inputType && e.inputType.startsWith('insert');
+    const replacing = titleInput.selectionStart !== titleInput.selectionEnd;
+    if (inserting && !replacing && titleInput.value.length >= TITLE_MAX) {
+      titleBlock.classList.add('limit-warn');
+    }
+  });
+
+  titleInput.addEventListener('input', () => {
+    const titleEl = titleInput;
     // Clear the warning state as soon as the user starts typing.
-    const titleEl = document.getElementById('event-title');
     if (titleEl.classList.contains('warn') && titleEl.value.trim()) {
       titleEl.classList.remove('warn');
       titleEl.placeholder = '배틀 타이틀을 입력하세요';
     }
+    // Hide the over-limit warning once back under the cap.
+    if (titleEl.value.length < TITLE_MAX) titleBlock.classList.remove('limit-warn');
     saveToLocalStorage();
     syncTitleHud();
   });

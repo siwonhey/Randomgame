@@ -12,21 +12,6 @@
 <body>
 <div id="app">
 
-  <!-- ─── Bottom black gradient — visible during the landing splash and
-       fades out as the setup card slides up, so the card reads as
-       emerging from darkness on first load. ─── -->
-  <div id="card-entrance-gradient" aria-hidden="true"></div>
-
-  <!-- ─── Landing splash (plays LOGO.mp4 once on initial page load) ─── -->
-  <div id="landing-splash">
-    <video id="landing-logo" autoplay muted playsinline preload="auto">
-      <source src="LOGO.mp4" type="video/mp4">
-    </video>
-    <div id="landing-loading" aria-hidden="true">
-      <span>L</span><span>o</span><span>a</span><span>d</span><span>i</span><span>n</span><span>g</span><span>.</span><span>.</span><span>.</span>
-    </div>
-  </div>
-
   <!-- ─── Three.js arena ─── -->
   <div id="game-area">
     <div id="title-hud"></div>
@@ -67,9 +52,12 @@
 
       <!-- TITLE field -->
       <div class="field-block">
-        <label class="field-label" for="event-title">TITLE</label>
+        <div class="field-header">
+          <label class="field-label" for="event-title">TITLE</label>
+          <span class="field-limit" id="title-limit" aria-hidden="true">10자 이내로 작성해주세요</span>
+        </div>
         <div class="input-box">
-          <input type="text" id="event-title" placeholder="배틀 타이틀을 입력하세요" spellcheck="false" autocomplete="off">
+          <input type="text" id="event-title" placeholder="배틀 타이틀을 입력하세요" maxlength="10" spellcheck="false" autocomplete="off">
           <span class="field-ph" aria-hidden="true"><b>배틀 타이틀</b><span class="ph-tail">을 입력하세요</span></span>
         </div>
       </div>
@@ -78,6 +66,7 @@
       <div class="field-block">
         <div class="field-header">
           <span class="field-label">PARTICIPANTS</span>
+          <span class="field-limit" id="participant-limit" aria-hidden="true">최대 30명까지 입력할 수 있어요</span>
         </div>
 
         <div class="name-input-row">
@@ -134,10 +123,6 @@
   <aside class="roster-block roster-corner">
     <div class="participants-wrap">
       <div class="participants"></div>
-    </div>
-    <div class="col-label">
-      <span>PARTICIPANTS</span>
-      <span class="count-display count-display-hud">0</span>
     </div>
   </aside>
 

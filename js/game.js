@@ -214,35 +214,56 @@ function showResult() {
   showWinner(winner);
 
   // Ranks 2nd onward — winner is displayed separately in 3D above the list.
-  // Split into top-down columns of 8 so every name is visible at once
-  // (no scroll). Items 1-8 → column 1, 9-16 → column 2, ...
-  resultList.innerHTML = '';
-  const RESULT_PER_COL = 8;
   const items = state.rankings.slice(1);
-  const colCount = Math.max(1, Math.ceil(items.length / RESULT_PER_COL));
-  for (let c = 0; c < colCount; c++) {
-    const colEl = document.createElement('div');
-    colEl.className = 'result-column';
-    const start = c * RESULT_PER_COL;
-    const end = Math.min(items.length, start + RESULT_PER_COL);
-    for (let i = start; i < end; i++) {
-      const top = items[i];
-      const rank = i + 2;
-      const medal = rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
-      const div = document.createElement('div');
-      div.className = 'result-item';
-      const rankSpan = document.createElement('span');
-      rankSpan.className = 'result-rank';
-      rankSpan.textContent = medal;
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'result-name';
-      nameSpan.textContent = top.name;
-      div.appendChild(rankSpan);
-      div.appendChild(nameSpan);
-      div.style.animationDelay = `${i * 0.08}s`;
-      colEl.appendChild(div);
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
+  // Render the ranking into top-down columns of `perCol` rows each (fill the
+  // first column fully, then spill into the next — same as the input roster).
+  const buildColumns = (perCol) => {
+    resultList.innerHTML = '';
+    const colCount = Math.max(1, Math.ceil(items.length / perCol));
+    for (let c = 0; c < colCount; c++) {
+      const colEl = document.createElement('div');
+      colEl.className = 'result-column';
+      const start = c * perCol;
+      const end = Math.min(items.length, start + perCol);
+      for (let i = start; i < end; i++) {
+        const top = items[i];
+        const rank = i + 2;
+        const medal = rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        const rankSpan = document.createElement('span');
+        rankSpan.className = 'result-rank';
+        rankSpan.textContent = medal;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'result-name';
+        nameSpan.textContent = top.name;
+        div.appendChild(rankSpan);
+        div.appendChild(nameSpan);
+        div.style.animationDelay = `${i * 0.08}s`;
+        colEl.appendChild(div);
+      }
+      resultList.appendChild(colEl);
     }
-    resultList.appendChild(colEl);
+  };
+
+  if (isMobile) {
+    // Mobile: keep a SINGLE column for as long as it fits above the COPY / PLAY
+    // AGAIN buttons; only spill into more columns once it would overflow. (With
+    // just 2 players the loser list is 1 name → naturally stays one column.)
+    // Measure a full single column first, then, if it overflows the space the
+    // flex list is allotted, derive how many rows actually fit and rebuild.
+    buildColumns(items.length);
+    if (resultList.scrollHeight > resultList.clientHeight + 1) {
+      const rowH = resultList.scrollHeight / items.length;
+      const fit = Math.max(1, Math.floor(resultList.clientHeight / rowH));
+      buildColumns(fit);
+    }
+  } else {
+    // Desktop: top-down columns of 8, but never more than 4 columns — once past
+    // 32 names the per-column count grows instead of adding a 5th column.
+    buildColumns(Math.max(8, Math.ceil(items.length / 4)));
   }
 
   // The overlay just became visible — re-measure the scroll indicator so it

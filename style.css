@@ -421,6 +421,24 @@ body.popup-open #popup-close { display: flex; }
   gap: 10px;
 }
 
+/* Unified limit warning, shared by TITLE (10 chars) and PARTICIPANTS (30 people):
+   a single .limit-warn on the .field-block lights up BOTH a red hint beside the
+   label AND a red border on the input box, so the two read identically. The hint
+   is always laid out (only opacity animates) so toggling it never shifts the card. */
+.field-limit {
+  font-family: var(--f-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--c-accent-red);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.field-block.limit-warn .field-limit { opacity: 1; }
+.field-block.limit-warn .input-box,
+.field-block.limit-warn .name-input-row { border-color: rgba(230, 57, 70, 0.55); }
+
 /* SHUFFLE row sits after the list — appears once there are 2+ participants,
    so the button only shows when it's actually meaningful. */
 /* SHUFFLE — square icon box sized like the mute toggle, sits between mute
@@ -461,12 +479,22 @@ body.popup-open #popup-close { display: flex; }
 #shuffle-hint {
   position: absolute;
   bottom: calc(100% + 12px);
-  left: 50%;
-  /* Body shifted right by ~32px from the button center; the tail below is
-     pulled back by the same amount so it stays anchored over the button. */
-  transform: translate(calc(-50% + 32px), 6px);
-  display: none;
-  padding: 12px 28px 12px 14px;          /* right pad reserves space for × */
+  /* Anchor the bubble's LEFT edge to the row's left edge — i.e. the mute button,
+     which is flush with the card content — so the bubble no longer juts out past
+     the elements below it. The mute button (56px) + the .cta-row gap (12px) sit
+     to the left of the shuffle button, so −68px lands the bubble on that edge.
+     The tail (::after) is offset back to keep pointing at the shuffle button. */
+  left: -68px;
+  transform: translateY(6px);
+  /* Kept rendered (flex) at all times so the auto-dismiss can fade opacity
+     gradually — display:none would snap it off with no transition. It's
+     absolutely positioned, so being present never affects the row's layout. */
+  display: flex;
+  /* Inline flow: text + close × on one row. align-items centers the × on the
+     text line so they read as a single baseline-matched unit. */
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
   background: rgba(46, 46, 50, 0.98);
   color: rgba(255,255,255,0.92);
   font-family: var(--f-body);
@@ -474,28 +502,27 @@ body.popup-open #popup-close { display: flex; }
   font-weight: 500;
   letter-spacing: 0.2px;
   line-height: 1.4;
-  /* Korean word-aware wrapping: never break inside a 어절, always at spaces. */
-  word-break: keep-all;
-  overflow-wrap: normal;
-  white-space: normal;
-  /* Width scaled with the font bump so the long Korean line still fits on a
-     single row without re-wrapping. */
-  width: 280px;
+  /* Always a single line regardless of viewport — width follows the text so it
+     never wraps. Mobile tightens the font below if the line would overflow. */
+  white-space: nowrap;
+  width: max-content;
+  max-width: 92vw;
   text-align: left;
   border-radius: 10px;
   box-shadow: 0 10px 28px rgba(0,0,0,0.6);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease 0.05s, transform 0.25s ease 0.05s;
+  /* Slow fade so the 15s auto-dismiss reads as a gentle dissolve, not a cut. */
+  transition: opacity 0.9s ease, transform 0.9s ease;
   z-index: 13;
 }
 #shuffle-hint::after {
   content: '';
   position: absolute;
   top: 100%;
-  /* Pull the tail back by the same 32px the body was shifted right so it
-     keeps pointing at the shuffle button regardless of the body offset. */
-  left: calc(50% - 32px);
+  /* Point the tail at the shuffle button center: 56 (mute) + 12 (gap) + 28
+     (half the 56px button) = 96px from the bubble's left edge. */
+  left: 96px;
   transform: translateX(-50%);
   width: 0;
   height: 0;
@@ -504,25 +531,19 @@ body.popup-open #popup-close { display: flex; }
   border-top: 7px solid rgba(46, 46, 50, 0.98);
 }
 #shuffle-hint .hint-text {
-  display: block;
+  flex: 0 1 auto;
 }
 #shuffle-hint .hint-close {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 18px;
-  height: 18px;
+  /* Inline after the text (not corner-absolute), sized to the text and
+     vertically centered with it by the parent flex's align-items. */
+  flex-shrink: 0;
   padding: 0;
   background: transparent;
   border: none;
   color: rgba(255,255,255,0.55);
-  font-size: 18px;
+  font-size: 1.25em;       /* a touch larger than the hint text so the × reads clearly */
   line-height: 1;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
   transition: color 0.15s ease, background 0.15s ease;
 }
 #shuffle-hint .hint-close:hover {
@@ -530,9 +551,8 @@ body.popup-open #popup-close { display: flex; }
   background: rgba(255,255,255,0.08);
 }
 body.shuffle-hint-active #shuffle-hint {
-  display: block;
   opacity: 1;
-  transform: translate(calc(-50% + 32px), 0);
+  transform: translateY(0);
   pointer-events: auto;
 }
 
@@ -859,23 +879,6 @@ body.shuffle-hint-active #shuffle-hint {
   text-align: right;
 }
 
-.roster-corner .col-label {
-  display: flex;
-  justify-content: flex-end;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--f-body);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.55);
-  padding-top: 6px;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  margin-top: 8px;
-}
-.roster-card .col-label { display: none; }
-
 /* ─────────────────────────────────────────────
    START GAME (primary CTA)
    ───────────────────────────────────────────── */
@@ -910,9 +913,21 @@ body.shuffle-hint-active #shuffle-hint {
    ───────────────────────────────────────────── */
 #title-hud {
   position: absolute;
-  top: 32px;
+  /* Balancing the title against a wide logo and a narrower mute button without
+     resizing either: reserve the WIDER element's footprint symmetrically on
+     both sides and center the title in what's left. In practice that's a plain
+     viewport-center (left:50%) — which also lines the title up with the centered
+     "N REMAINING" / timer below — plus a max-width that keeps it clear of the
+     logo (the binding side): logo right edge (36 + 32×98/38 ≈ 118px) + 24px
+     breathing, reserved each side ⇒ 100vw − 284px; it clips with … past that.
+     Vertically it's centered (translateY −50%) on the logo's mid-line (top = its
+     center, 28 + 16 = 44px) rather than top-aligned, so it stays balanced as the
+     font scales down on smaller screens instead of hugging the top edge. */
+  top: 44px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - 284px);
+  text-align: center;
   font-family: var(--f-body);
   font-size: 16px;
   font-weight: 500;
@@ -920,7 +935,6 @@ body.shuffle-hint-active #shuffle-hint {
   color: rgba(255,255,255,0.85);
   text-shadow: 0 0 24px rgba(0,0,0,0.6);
   white-space: nowrap;
-  max-width: 60vw;
   overflow: hidden;
   text-overflow: ellipsis;
   z-index: 5;
@@ -1386,8 +1400,9 @@ body[data-phase="result"] .brand-block {
    Responsive — Tablet
    ───────────────────────────────────────────── */
 @media (max-width: 1023px) and (min-width: 768px) {
-  .brand-block { top: 22px; left: 26px; }
-  .brand-icon { height: 28px; }
+  /* Top bar (logo / title / mute / remaining / timer) inherits the desktop
+     layout unchanged — only the setup card reflows on tablet. Keeping one top-bar
+     spec for every width ≥768px removes the per-breakpoint size/position drift. */
   .setup-card { padding: 36px 36px 32px; gap: 24px; }
   .setup-card[data-cols="3"] { max-width: 720px; }
   .setup-card[data-cols="4"] { max-width: 900px; }
@@ -1403,11 +1418,13 @@ body[data-phase="result"] .brand-block {
   #name-input,
   #event-title { font-size: 20px; }
 
+  /* Logo keeps its 32px size (inherited from the base rule) at every width — only
+     its inset tightens on mobile. The 15-char title cap keeps the centered title
+     clear of this full-size logo. */
   .brand-block {
     top: 22px;
     left: 22px;
   }
-  .brand-icon { height: 26px; width: auto; }
 
   /* While the setup card scrolls, its participant text passes behind the fixed
      top-left logo and the two overlap confusingly. A fixed dark gradient strip
@@ -1533,44 +1550,36 @@ body[data-phase="result"] .brand-block {
     height: 50px;
     border-radius: 10px;
   }
-  /* Size the bubble to its text (width: max-content) rather than `auto` — an
-     absolutely-positioned `auto` collapses to the 50px shuffle button width,
-     which wrapped the message into many narrow lines that covered the roster.
-     max-content keeps it to a single line (≤ 2 once it hits the max-width cap),
-     and the close × sits right after the text. */
+  /* Single line on mobile — sized close to the PC bubble (15px), just a touch
+     smaller. Left edge re-anchored to the row's left edge: the mute/shuffle
+     buttons are 50px here + 12px gap, so −62px lands the bubble on the card
+     content edge (tail re-pointed at the shuffle button below). */
   #shuffle-hint {
-    font-size: 13px;
-    padding: 10px 28px 10px 13px;
+    font-size: 14px;
+    padding: 11px 14px;
     width: max-content;
-    max-width: min(84vw, 270px);
+    max-width: 92vw;
     line-height: 1.4;
+    left: -62px;
   }
-  /* While the first-run shuffle hint is showing, shrink the roster scroll area
-     so the bubble (which pops up above the shuffle button) lands in clear space
-     and doesn't cover participant names. Tuned to clear a 2-line bubble while
-     keeping the names↔bubble gap tight. Reverts the moment the hint's close ×
-     is pressed — no permanent loss of list height. */
-  body.shuffle-hint-active .roster-card { margin-bottom: 60px; }
+  /* 50 (mute) + 12 (gap) + 25 (half the 50px button) = 87px from the left edge. */
+  #shuffle-hint::after { left: 87px; }
+  /* No roster margin reservation for the hint: it overlays the roster while
+     visible (higher z-index) and fades out in place, so dismissing it never
+     reflows the list or lifts the mute / shuffle / START buttons below it. */
 
-  /* HUD adjustments — align the title/REMAINING stack with the mute button
-     (#popup-toggle: top 22px, 44px tall → vertical center ≈ 44px). The title
-     was sitting ~18px too high; shift the whole stack down so the title centers
-     on the mute row, with the timer following beneath. */
+  /* HUD adjustments */
   #countdown { font-size: 84px; }
-  /* Vertically center the title on the mute button's row. The mute button
-     (#popup-toggle: top 22px, 44px tall) is centered at y≈44px; translateY(-50%)
-     centers the title box there regardless of its line height, so it lines up
-     exactly instead of sitting a few px low. */
+  /* Same centering model as desktop (inherited left:50% + translate −50%,−50%),
+     only the numbers change for mobile: the vertical center is the logo's mid-
+     line (brand top 22 + 32/2 = 38px), and the reserved side margin tracks the
+     smaller logo inset (right edge 22 + 82 = 104px + 14px ⇒ 236px total). The
+     15-char cap + … keep it off the logo and the 44px mute button. */
   #title-hud {
-    top: 44px;
-    transform: translate(-50%, -50%);
+    top: 38px;
+    max-width: calc(100vw - 236px);
     font-size: 13px;
     letter-spacing: 3px;
-    /* Centered title must clear the top-left logo (~right edge 89px) and the
-       top-right mute button on narrow phones — a fixed 60vw overruns the logo
-       below ~445px wide. This obstacle-aware cap keeps the title between them,
-       clipping long titles with the inherited ellipsis instead. */
-    max-width: calc(100vw - 210px);
   }
   #status-bar { top: 60px; font-size: 10px; letter-spacing: 1.5px; }
   #timer-display { top: 84px; font-size: 18px; }
@@ -1594,11 +1603,14 @@ body[data-phase="result"] .brand-block {
      and action buttons are fixed; ONLY the ranking list scrolls — so REPLAY /
      COPY RESULTS stay on screen no matter how many participants there are. */
   #result-overlay {
-    justify-content: flex-start;
-    /* Larger bottom padding gives the COPY / PLAY AGAIN row breathing room so it
-       never sits flush against the screen edge when the list fills the height.
-       (The list shrinks/scrolls to fit, so this padding is always honored.) */
-    padding: 2vh 16px 30px;     /* top: nudge the hero (3D + winner) up a touch */
+    /* Center the whole result block (spinner + winner + list + actions) so a
+       short result (few participants) sits balanced in the middle of the screen
+       instead of clinging to the top. When there are many participants the list
+       shrinks/scrolls internally (flex:0 1 auto + overflow), so result-content
+       stays ≤ 100% and centering is a no-op — the actions never get pushed off. */
+    justify-content: center;
+    /* Bottom padding keeps the COPY / PLAY AGAIN row off the screen edge. */
+    padding: 2vh 16px 30px;
     overflow: hidden;
   }
   .result-content {
@@ -1617,10 +1629,13 @@ body[data-phase="result"] .brand-block {
   #result-list {
     margin-top: 24px;     /* clearer separation between the hero and rankings */
     padding: 2px 0;
-    flex-direction: column;
+    /* Two vertical columns side by side (2열). Names are split across them in
+       JS (ceil(N/2) per column). */
+    flex-direction: row;
     flex-wrap: nowrap;
-    align-items: center;
-    gap: 6px;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 14px;            /* gap between the two columns */
     /* Sized to its rows (fixed-width items) and centered by result-content, so
        the custom scroll indicator lands at the list's right edge — right next
        to the names — instead of way out at the page edge like a page scrollbar. */
@@ -1629,12 +1644,23 @@ body[data-phase="result"] .brand-block {
     min-width: 0;         /* override the desktop min-width so the list hugs its rows */
     flex: 0 1 auto;       /* shrinks to fit so the actions row stays visible */
     min-height: 0;
-    overflow-y: auto;     /* native bar hidden; custom indicator drawn instead */
+    /* Scrolls only once the two columns fill past this shrunk height — i.e.
+       when 2열이 아래까지 채워진 경우에만. Custom indicator drawn instead of
+       the native bar. */
+    overflow-y: auto;
     overflow-x: hidden;
   }
-  #result-list .result-column { display: contents; }
+  #result-list .result-column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;             /* row gap within each column */
+  }
   #result-list .result-item {
-    width: 11em;          /* rank (32px) + gap + 7em name → consistent columns */
+    /* Size to content (like desktop) instead of a fixed 10em. A fixed width
+       made a single centered column hug the left edge of an over-wide box, so
+       the list looked left-skewed; content-width lets the centered column wrap
+       its text tightly and read as centered. The 32px rank slot + name's
+       max-width:7em still keep short names from collapsing. */
     max-width: 100%;
   }
 
@@ -1668,7 +1694,9 @@ body[data-phase="result"] .brand-block {
 @media (max-width: 767px) and (orientation: landscape) {
   #setup-panel { padding-top: 60px; }
   #countdown { font-size: 56px; }
-  #title-hud { top: 8px; font-size: 11px; letter-spacing: 2.5px; }
+  /* Landscape squeezes the HUD toward the top, so drop the vertical-centering
+     transform (keep only horizontal) and top-align the title at 8px. */
+  #title-hud { top: 8px; transform: translateX(-50%); font-size: 11px; letter-spacing: 2.5px; }
   #status-bar { top: 26px; font-size: 9.5px; }
   #timer-display { top: 44px; font-size: 16px; }
   .roster-corner { bottom: 8px; }
