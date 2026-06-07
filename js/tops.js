@@ -479,6 +479,11 @@ export function addTopPhysics(name, color) {
     rpm: 0,
     initialSpin: cryptoRange(1000, 1500),
     radius,
+    // Slight per-top strength (±8%). Scales the charge dash + bounce in physics.js
+    // so no two tops behave identically — breaks the symmetric standoffs where two
+    // tops keep charging, clashing, and returning to the same spots forever. Keeps
+    // the motion FORM the same; just gives each top a little individual difference.
+    power: cryptoRange(0.92, 1.08),
   };
   tops.push(top);
   updateTopPosition(top);

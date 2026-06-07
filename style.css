@@ -1538,9 +1538,13 @@ body[data-phase="result"] .brand-block {
     margin-left: 2px;  /* hug the name (… ) instead of drifting right */
   }
 
-  /* Reduce CTA row margin on mobile; hint bubble still clears the roster
-     since it's absolutely positioned and overlays at a higher z-index. */
-  .cta-row { margin-top: 16px; }
+  /* While the SHUFFLE hint is showing, open a gap between the participant list
+     and the CTA row so the bubble (floats ~54px above the buttons) sits in the
+     empty space instead of covering the names. Only while the hint is active —
+     it collapses (animated, in sync with the 0.9s bubble fade) once dismissed,
+     so there's no permanent dead space. */
+  .cta-row { margin-top: 16px; transition: margin-top 0.9s ease; }
+  body.shuffle-hint-active .cta-row { margin-top: 56px; }
 
   .primary-btn {
     height: 50px;
@@ -1582,7 +1586,7 @@ body[data-phase="result"] .brand-block {
   #title-hud {
     top: 38px;
     max-width: calc(100vw - 236px);
-    font-size: 15px;
+    font-size: 18px;   /* +3px (was 15px) — bigger in-game title on mobile */
     letter-spacing: 3px;
   }
   #status-bar { top: 60px; font-size: 10px; letter-spacing: 1.5px; }
@@ -1702,7 +1706,7 @@ body[data-phase="result"] .brand-block {
   #countdown { font-size: 56px; }
   /* Landscape squeezes the HUD toward the top, so drop the vertical-centering
      transform (keep only horizontal) and top-align the title at 8px. */
-  #title-hud { top: 8px; transform: translateX(-50%); font-size: 11px; letter-spacing: 2.5px; }
+  #title-hud { top: 8px; transform: translateX(-50%); font-size: 14px; letter-spacing: 2.5px; }  /* +3px (was 11px) */
   #status-bar { top: 26px; font-size: 9.5px; }
   #timer-display { top: 44px; font-size: 16px; }
   .roster-corner { bottom: 8px; }

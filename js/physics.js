@@ -11,7 +11,7 @@ const { Engine, Body, Events } = Matter;
 
 // Version marker — confirms the browser loaded THIS fresh build (catches stale
 // cache). TEMP, remove once the battle feel is confirmed.
-console.log('%c[PHYSICS BUILD v18 — dash acceleration on the charge]', 'color:#4cf');
+console.log('%c[PHYSICS BUILD v20 — gentle seek after 3s (< center pull)]', 'color:#4cf');
 
 export const engine = Engine.create({ gravity: { x: 0, y: 0 } });
 export const world = engine.world;
@@ -81,8 +81,10 @@ Events.on(engine, 'collisionStart', (event) => {
     const dB = Math.sqrt(pB.x * pB.x + pB.y * pB.y);
     const ax = dA > 1 ? pA.x / dA : -nlx, ay = dA > 1 ? pA.y / dA : -nly;
     const bx = dB > 1 ? pB.x / dB :  nlx, by = dB > 1 ? pB.y / dB :  nly;
-    Body.setVelocity(topA.body, { x: ax * out, y: ay * out });
-    Body.setVelocity(topB.body, { x: bx * out, y: by * out });
+    // ×power: each top bounces a touch differently, so a clash is never perfectly
+    // symmetric — breaks the standoffs where two tops keep mirroring each other.
+    Body.setVelocity(topA.body, { x: ax * out * topA.power, y: ay * out * topA.power });
+    Body.setVelocity(topB.body, { x: bx * out * topB.power, y: by * out * topB.power });
 
     // clash feedback (sparks / camera punch) on harder hits
     const intensity = Math.min(Math.abs(closing) / 12, 1);
@@ -144,14 +146,13 @@ export function physicsTick() {
   let maxDR = 0;   // TEMP DIAGNOSTIC
 
   // Tops get stronger over TIME (not by count): flat 1x for the first 7s, then
-  // eases up to a max of ~2x by ~25s and holds there. Starts at 7s so the opening
-  // stays calm; max ≈ the current peak strength.
-  powerBoost = 1 + Math.min(Math.max(state.battleElapsed - 7, 0) / 18, 1) * 1.0;
-  // NOTE: there is deliberately NO "seek" (no top chasing another). The center
-  // pull alone gathers everyone so they meet and clash — that's enough of a
-  // pretext for collisions. A seek force would re-aim a top that just ricocheted
-  // back toward another top, spending the bounce on "finding a rival" instead of
-  // letting it fly OUT — so nobody would ever ring out, they'd just keep colliding.
+  // eases up to a max of ~2.5x by ~25s and holds there. Starts at 7s so the opening
+  // stays calm; the longer the battle runs, the harder the clashes.
+  powerBoost = 1 + Math.min(Math.max(state.battleElapsed - 7, 0) / 18, 1) * 1.5;
+  // The center pull is the PRIMARY way tops meet (gather → clash). There is also a
+  // very weak seek (added per-top below, after 3s) that just keeps the last tops
+  // from sailing through an empty center and out — it's always far weaker than the
+  // center pull, so gathering stays dominant and bounces still ring tops out.
 
   for (const top of active) {
     // Cap speed before adding more force so the ricochet can't run away. The cap
@@ -233,11 +234,39 @@ export function physicsTick() {
     {
       const inward = (top.body.velocity.x * dx + top.body.velocity.y * dy) / dist; // >0 = charging in
       if (inward > 0.3) {
-        const dash = 0.00012 * inward;
+        const dash = 0.00012 * inward * top.power;   // ×power: slight per-top charge difference
         Body.applyForce(top.body, top.body.position, {
           x: (dx / dist) * dash,
           y: (dy / dist) * dash,
         });
+      }
+    }
+
+    // Gentle SEEK toward the nearest rival, ramping in only AFTER 3s. Purpose: when
+    // the center happens to be empty, a charging top would otherwise sail straight
+    // through to the far rim and ring ITSELF out with no fight — this nudges it
+    // toward where an opponent actually is so a clash happens instead. Deliberately
+    // VERY weak and ALWAYS below the center pull (0.0004 max vs pull up to 0.0018),
+    // so gathering-to-center stays the dominant motion. Aims at the rival's CURRENT
+    // position (no velocity prediction — prediction is what caused flocking before).
+    if (state.battleElapsed > 3 && active.length > 1) {
+      let nearest = null, nd = Infinity;
+      for (const other of active) {
+        if (other === top) continue;
+        const ox = other.body.position.x - top.body.position.x;
+        const oy = other.body.position.y - top.body.position.y;
+        const d2 = ox * ox + oy * oy;
+        if (d2 < nd) { nd = d2; nearest = other; }
+      }
+      if (nearest) {
+        // ×rimFade too, so near the rim the seek fades exactly like the pull —
+        // keeps the pull always > seek AND lets a bounced-out top leave (not get
+        // seek-pulled back). With the 0.0004 base < 0.0018 pull base, pull wins.
+        const seekForce = 0.0004 * Math.min((state.battleElapsed - 3) / 20, 1) * rimFade;
+        const sx = nearest.body.position.x - top.body.position.x;
+        const sy = nearest.body.position.y - top.body.position.y;
+        const sd = Math.sqrt(sx * sx + sy * sy) || 1;
+        Body.applyForce(top.body, top.body.position, { x: (sx / sd) * seekForce, y: (sy / sd) * seekForce });
       }
     }
 

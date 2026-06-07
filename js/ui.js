@@ -189,23 +189,31 @@ function copyResults() {
   const winner = ranked[0];
   const losers = ranked.slice(1);
 
-  let text = ` ─── BLITZ : BATTLE REPORT ${'─'.repeat(23)}\n\n`;
-  text += ` 📄 NOTE\n`;
-  text += ` ${title}\n\n`;
-  text += ` 🏆 WINNER ── ${winner.name}\n\n`;
+  // English ordinal: 2→2nd, 3→3rd, 4→4th, … (with the 11–13 → "th" exception).
+  const ordinal = (n) => {
+    const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
 
-  // Losers in a single top-down list, ranks zero-padded (02., 03., …) so the
-  // winner reads as 1st implicitly.
+  let text = ` ──── BLITZ : REPORT ────\n`;
+  text += ` ${title}\n\n`;
+  text += ` 🏆 WINNER ${winner.name}\n\n`;
+
+  // 2nd onward; the winner is the implicit 1st shown above.
   if (losers.length) {
     losers.forEach((p, i) => {
-      text += ` ${String(i + 2).padStart(2, '0')}. ${p.name}\n`;
+      text += ` ${ordinal(i + 2)}. ${p.name}\n`;
     });
     text += `\n`;
   }
 
-  text += ` ${'─'.repeat(49)}\n`;
-  text += ` 🎮 REDEFINING THE EXPERIENCE OF RANDOM SELECTION\n`;
-  text += ` 👉 [Play BLITZ Now](https://randomgame-7pg4.vercel.app/)\n`;
+  // Bottom rule sized to VISUALLY match the header `─── BLITZ : REPORT ───`. In
+  // proportional fonts (chat apps) the box-drawing `─` renders wider than letters,
+  // so a same-char-count line of solid dashes looks longer than the titled header;
+  // 18 dashes balances the two lengths.
+  text += ` ${'─'.repeat(18)}\n`;
+  // The link sits on the word "BLITZ" (per the report spec).
+  text += ` ▶ Play [BLITZ](https://randomgame-7pg4.vercel.app/) Now\n`;
 
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('btn-copy');
@@ -330,9 +338,10 @@ export function initUI() {
   // by pressing SHUFFLE (treated as read), or by the auto-dismiss timer below.
   // Not persisted to storage — a page refresh re-arms it.
   document.body.classList.add('shuffle-hint-active');
-  // Auto-dismiss 10s after the user lands on the setup screen (the × button and
-  // pressing SHUFFLE still dismiss it earlier). Fades via the opacity transition.
-  setTimeout(dismissShuffleHint, 10000);
+  // Auto-dismiss 5s after the user lands on the setup screen (the × button and
+  // pressing SHUFFLE still dismiss it earlier). Fades out gently via the 0.9s
+  // opacity transition on #shuffle-hint.
+  setTimeout(dismissShuffleHint, 5000);
   const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
   if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
 
