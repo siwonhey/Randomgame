@@ -102,7 +102,13 @@ export function eliminateTop(top) {
 // Wire physics → game
 registerPhysicsCallbacks({
   onEliminate: eliminateTop,
-  onImpact: cameraImpact,
+  onImpact: (info) => {
+    cameraImpact(info);
+    // Spark burst ONLY on genuinely hard clashes — light grazes shouldn't spark.
+    if (info.intensity > 0.62) {
+      spawnParticles(info.cx, info.cz, 0xffffff, Math.round(info.intensity * 6));
+    }
+  },
   getTops: () => tops,
 });
 
@@ -171,7 +177,7 @@ function launchTops() {
     const dx = -top.body.position.x;
     const dy = -top.body.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const speed = 3 + Math.random();
+    const speed = 1.4 + Math.random() * 0.6;   // slow glide into the center; the gather force does the rest, so the opening converges calmly rather than slamming
     Body.setVelocity(top.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
   });
 
@@ -249,16 +255,14 @@ function showResult() {
   };
 
   if (isMobile) {
-    // Mobile: keep a SINGLE column for as long as it fits above the COPY / PLAY
-    // AGAIN buttons; only spill into more columns once it would overflow. (With
-    // just 2 players the loser list is 1 name → naturally stays one column.)
-    // Measure a full single column first, then, if it overflows the space the
-    // flex list is allotted, derive how many rows actually fit and rebuild.
+    // Mobile: cap at 2 columns (2열). Keep a SINGLE column while it fits above
+    // the COPY / PLAY AGAIN buttons; once it would overflow, split into exactly
+    // two columns (ceil(N/2) per column). If two columns still overflow the
+    // allotted height, the list scrolls vertically (CSS overflow-y on
+    // #result-list) so every rank stays reachable within the 2열 layout.
     buildColumns(items.length);
     if (resultList.scrollHeight > resultList.clientHeight + 1) {
-      const rowH = resultList.scrollHeight / items.length;
-      const fit = Math.max(1, Math.floor(resultList.clientHeight / rowH));
-      buildColumns(fit);
+      buildColumns(Math.ceil(items.length / 2));
     }
   } else {
     // Desktop: top-down columns of 8, but never more than 4 columns — once past

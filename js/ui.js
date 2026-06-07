@@ -268,6 +268,17 @@ export function initUI() {
     if (state.participants.length >= MAX_PARTICIPANTS) setParticipantLimitWarning(true);
   });
 
+  // At the 30-person cap, block typing into the name field outright (mirrors the
+  // TITLE 10-char cap): preventDefault stops keyboard + IME inserts so no extra
+  // text can be entered, and the red "최대 30명" notice lights up.
+  nameInput.addEventListener('beforeinput', (e) => {
+    const inserting = e.inputType && e.inputType.startsWith('insert');
+    if (inserting && state.participants.length >= MAX_PARTICIPANTS) {
+      e.preventDefault();
+      setParticipantLimitWarning(true);
+    }
+  });
+
   nameInput.addEventListener('keydown', (e) => {
     if (e.isComposing || e.keyCode === 229) return;  // IME safety (Korean composition)
     if (e.key === 'Enter') {
@@ -308,15 +319,19 @@ export function initUI() {
     });
   }
 
-  document.getElementById('shuffle-btn').addEventListener('click', shuffleParticipants);
+  document.getElementById('shuffle-btn').addEventListener('click', () => {
+    // Pressing SHUFFLE before the auto-dismiss timer counts as having read the
+    // hint, so close the bubble immediately.
+    dismissShuffleHint();
+    shuffleParticipants();
+  });
 
-  // First-visit hint above the SHUFFLE icon. Per user feedback, only the
-  // explicit × button on the bubble dismisses it — pressing SHUFFLE itself
-  // (or starting a battle) does NOT close the bubble. Not persisted to
-  // storage — a page refresh re-arms it.
+  // First-visit hint above the SHUFFLE icon. Dismissed by the explicit × button,
+  // by pressing SHUFFLE (treated as read), or by the auto-dismiss timer below.
+  // Not persisted to storage — a page refresh re-arms it.
   document.body.classList.add('shuffle-hint-active');
-  // Auto-dismiss 10s after the user lands on the setup screen (the × button
-  // still dismisses it earlier). Fades out via the bubble's opacity transition.
+  // Auto-dismiss 10s after the user lands on the setup screen (the × button and
+  // pressing SHUFFLE still dismiss it earlier). Fades via the opacity transition.
   setTimeout(dismissShuffleHint, 10000);
   const hintCloseBtn = document.querySelector('#shuffle-hint .hint-close');
   if (hintCloseBtn) hintCloseBtn.addEventListener('click', dismissShuffleHint);
@@ -355,23 +370,43 @@ export function initUI() {
   const TITLE_MAX = 10;
   const titleInput = document.getElementById('event-title');
   const titleBlock = titleInput.closest('.field-block');
+
+  // Over-limit warning: light up .limit-warn (red hint beside the label + red
+  // input border), hold it for 2s, then drop the class so it fades out via the
+  // CSS opacity/border-color transitions. Typing past the cap again restarts
+  // the 2s hold.
+  let titleWarnTimer = null;
+  function flashTitleLimit() {
+    titleBlock.classList.add('limit-warn');
+    if (titleWarnTimer) clearTimeout(titleWarnTimer);
+    titleWarnTimer = setTimeout(() => titleBlock.classList.remove('limit-warn'), 2000);
+  }
+
+  // Block the 11th character outright (instead of letting it appear and snap
+  // back to 10): preventDefault stops the insert for keyboard + paste. Korean
+  // IME composition can still momentarily exceed the cap, so the input handler
+  // below clamps on commit as a backstop.
   titleInput.addEventListener('beforeinput', (e) => {
     const inserting = e.inputType && e.inputType.startsWith('insert');
     const replacing = titleInput.selectionStart !== titleInput.selectionEnd;
     if (inserting && !replacing && titleInput.value.length >= TITLE_MAX) {
-      titleBlock.classList.add('limit-warn');
+      e.preventDefault();
+      flashTitleLimit();
     }
   });
 
   titleInput.addEventListener('input', () => {
     const titleEl = titleInput;
-    // Clear the warning state as soon as the user starts typing.
+    // IME backstop: clamp to the cap if composition pushed the value past it.
+    if (titleEl.value.length > TITLE_MAX) {
+      titleEl.value = titleEl.value.slice(0, TITLE_MAX);
+      flashTitleLimit();
+    }
+    // Clear the empty-title warning as soon as the user starts typing.
     if (titleEl.classList.contains('warn') && titleEl.value.trim()) {
       titleEl.classList.remove('warn');
       titleEl.placeholder = '배틀 타이틀을 입력하세요';
     }
-    // Hide the over-limit warning once back under the cap.
-    if (titleEl.value.length < TITLE_MAX) titleBlock.classList.remove('limit-warn');
     saveToLocalStorage();
     syncTitleHud();
   });

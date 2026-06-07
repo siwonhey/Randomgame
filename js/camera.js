@@ -53,6 +53,7 @@ export function setMode(newMode, payload = {}) {
     winnerRef = null;
     shakeAmount = 0;
     zoomPunch = 0;
+    flashLight.intensity = 0;
     if (camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
   }
 }
@@ -193,5 +194,13 @@ export function updateCinematicCamera(activeTops) {
     camera.position.y += (Math.random() - 0.5) * shakeAmount;
     camera.position.z += (Math.random() - 0.5) * shakeAmount * 0.5;
     shakeAmount *= 0.88;
+  }
+
+  // Impact flash decays each frame; onImpact re-spikes it on the next clash.
+  // Without this it would latch on once collisions actually fire it.
+  if (flashLight.intensity > 0.01) {
+    flashLight.intensity *= 0.82;
+  } else if (flashLight.intensity !== 0) {
+    flashLight.intensity = 0;
   }
 }

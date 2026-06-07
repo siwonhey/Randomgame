@@ -192,17 +192,53 @@ export function createTop3D(color, scale = BASE_SCALE) {
 
   // ⑥ Radial gradient overlay — bright top-left, dark rim, gives the jelly
   //    disc its 3D dome reading.
+  // White center highlight removed (it read as a gray wash while spinning).
+  // Only a soft dark rim remains, purely for the domed-disc depth cue. (sheen
+  // color is still computed for the pinwheel arms below.)
+  const sheen = c.clone().lerp(new THREE.Color(0xffffff), 0.5);
+  const sR = Math.round(sheen.r * 255), sG = Math.round(sheen.g * 255), sB = Math.round(sheen.b * 255);
   const radial = dctx.createRadialGradient(0, -10, 0, 0, 0, 88);
-  // Toned-down central highlight (was 0.40) — keeps a soft dome sheen with the
-  // dark rim, but without the pale white wash that made the top face look hazy.
-  radial.addColorStop(0,   'rgba(255, 255, 255, 0.18)');
-  radial.addColorStop(0.5, 'rgba(255, 255, 255, 0.04)');
-  radial.addColorStop(1,   'rgba(0, 0, 0, 0.45)');
+  radial.addColorStop(0,   'rgba(0, 0, 0, 0)');
+  radial.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
+  radial.addColorStop(1,   'rgba(0, 0, 0, 0.42)');
   dctx.fillStyle = radial;
   dctx.globalAlpha = 1;
   dctx.beginPath();
   dctx.arc(0, 0, 88, 0, Math.PI * 2);
   dctx.fill();
+
+  // ⑦ Pinwheel spiral — a SPIN CUE. Everything else on the face (concentric
+  //    rings, radial gradient, 6-point star) is rotationally symmetric, so the
+  //    top read as static even while spinning fast. Several Archimedean arms
+  //    sweeping from the hub out to the rim break that symmetry; each arm is
+  //    drawn as tapering, fading segments (comet-trail look) so the rotation
+  //    reads instantly. Sits over the jelly, under the hub/star so the centre
+  //    emblem stays clean.
+  const SPIRAL_ARMS = 3;
+  const spiralTurn = 0.9;          // fraction of a full turn each arm sweeps
+  const spiralIn = 28, spiralOut = 84;
+  dctx.lineCap = 'round';
+  for (let a = 0; a < SPIRAL_ARMS; a++) {
+    const base = (a / SPIRAL_ARMS) * Math.PI * 2;
+    let prevX = null, prevY = null;
+    for (let t = 0; t <= 1.0001; t += 0.05) {
+      const rr = spiralIn + (spiralOut - spiralIn) * t;
+      const ang = base + t * spiralTurn * Math.PI * 2;
+      const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+      if (prevX !== null) {
+        // Same body-tinted sheen as the dome (not white) so the spinning arms
+        // blur into a colored gloss rather than a gray ring, while still being
+        // light enough against the disc to read the rotation.
+        dctx.strokeStyle = `rgba(${sR}, ${sG}, ${sB}, ${0.5 * (1 - t * 0.6)})`;
+        dctx.lineWidth = 6 * (1 - t * 0.5);
+        dctx.beginPath();
+        dctx.moveTo(prevX, prevY);
+        dctx.lineTo(px, py);
+        dctx.stroke();
+      }
+      prevX = px; prevY = py;
+    }
+  }
 
   // ⑧ Hub step — a darker disc behind the emblem, plus a bright outline,
   //    so the central area reads as a small recessed platform.
@@ -284,12 +320,13 @@ export function createTop3D(color, scale = BASE_SCALE) {
     group.add(claw);
   }
 
-  // ── Core glow ──
-  // Body-colored (was white) — this sphere sits exactly where the handle meets
-  // the disc, so a white core gave the connection a pale, washed-out look.
+  // ── Core (handle ↔ body junction) ──
+  // Sits exactly where the handle meets the disc. Material matches the handle
+  // (same color/roughness/emissive) so the junction reads as one piece with the
+  // handle instead of a brighter glowing bead.
   const core = new THREE.Mesh(
     sharedCoreGeo,
-    new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.9 })
+    new THREE.MeshStandardMaterial({ color: c, roughness: 0.1, emissive: c, emissiveIntensity: 0.15 })
   );
   core.position.y = discCenterY + 0.02;
   group.add(core);
@@ -409,9 +446,22 @@ export function addTopPhysics(name, color) {
 
   const body = Bodies.circle(x, y, radius, {
     mass: cryptoRange(0.6, 1.0),
-    restitution: cryptoRange(0.9, 1.2),
+    // High restitution gives a sharp, springy REBOUND on contact (the duel
+    // "clash" feel) — low values made hits read as soft pushes. The strong
+    // center gravity + lunge forces then reel the tops back in to collide
+    // again. Moderate air drag bleeds off any shared momentum so the field
+    // can't drift together in one direction between clashes.
+    // Springy (near-elastic): this is what lets a fast top knock a slower one
+    // clear across and out of the bowl. Low restitution just absorbed the hit so
+    // tops mushed into a sparking clump without ejecting anyone — the speed clamp
+    // in physics.js now prevents the runaway that high restitution used to cause,
+    // so we can keep clashes bouncy AND bounded.
+    restitution: cryptoRange(0.9, 0.97),
     friction: 0.001,
-    frictionAir: 0.0015,
+    // Low air drag so the field keeps its speed across the whole battle instead of
+    // bleeding energy and slowing down over time; the center pull replenishes it
+    // and the speed clamp (physics.js), not drag, caps the top end.
+    frictionAir: 0.0025,
     frictionStatic: 0,
   });
   Composite.add(world, body);
