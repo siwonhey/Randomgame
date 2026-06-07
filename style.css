@@ -1585,7 +1585,10 @@ body[data-phase="result"] .brand-block {
      15-char cap + … keep it off the logo and the 44px mute button. */
   #title-hud {
     top: 38px;
-    max-width: calc(100vw - 236px);
+    /* Title is capped at 10 chars in the input, so reserve only enough side room
+       to clear the top-left logo / top-right gear (~66px) and let the full 10
+       chars show without an ellipsis on 360px+ phones. */
+    max-width: calc(100vw - 130px);
     font-size: 18px;   /* +3px (was 15px) — bigger in-game title on mobile */
     letter-spacing: 3px;
   }
@@ -1680,8 +1683,13 @@ body[data-phase="result"] .brand-block {
   .result-actions { margin-top: 36px; flex-shrink: 0; }
   .result-actions button { padding: 8px 18px; font-size: 11px; }
 
-  /* Names ≤ ~6 Korean chars show fully; only longer names get an ellipsis. */
-  #result-list .result-name { max-width: 7em; }
+  /* Names ≤ ~6 Korean chars show fully; only longer names get an ellipsis.
+     flex-shrink:0 is CRITICAL: without it, when the two columns are wider than a
+     narrow viewport the flex row squeezes the names (min-width:0 + overflow:hidden)
+     down to ZERO width — the names vanished entirely on mobile. Pinning the name
+     and its column keeps them at content width so they always render. */
+  #result-list .result-name { max-width: 7em; flex-shrink: 0; }
+  #result-list .result-column { flex-shrink: 0; }
   .roster-card .participant .name { max-width: 7em; }
   .roster-corner .participant .name { max-width: 7em; }
 
