@@ -11,7 +11,7 @@ const { Engine, Body, Events } = Matter;
 
 // Version marker — confirms the browser loaded THIS fresh build (catches stale
 // cache). TEMP, remove once the battle feel is confirmed.
-console.log('%c[PHYSICS BUILD v20 — gentle seek after 3s (< center pull)]', 'color:#4cf');
+console.log('%c[PHYSICS BUILD v21 — late-game pursuit when ≤3 tops left]', 'color:#4cf');
 
 export const engine = Engine.create({ gravity: { x: 0, y: 0 } });
 export const world = engine.world;
@@ -262,7 +262,15 @@ export function physicsTick() {
         // ×rimFade too, so near the rim the seek fades exactly like the pull —
         // keeps the pull always > seek AND lets a bounced-out top leave (not get
         // seek-pulled back). With the 0.0004 base < 0.0018 pull base, pull wins.
-        const seekForce = 0.0004 * Math.min((state.battleElapsed - 3) / 20, 1) * rimFade;
+        //
+        // LATE-GAME PURSUIT: with only 2-3 tops left, the center-gather alone can
+        // leave them orbiting on opposite sides of the ring without ever meeting.
+        // Boost the seek so the survivors actively hunt each other into a final
+        // battle. Still kept below the center-pull base (0.0011 < 0.0018) and
+        // ×rimFade, so it reads as a gentle chase — a genuinely bounced-out top
+        // can still ring out instead of being dragged back.
+        const seekBase = active.length <= 3 ? 0.0011 : 0.0004;
+        const seekForce = seekBase * Math.min((state.battleElapsed - 3) / 20, 1) * rimFade;
         const sx = nearest.body.position.x - top.body.position.x;
         const sy = nearest.body.position.y - top.body.position.y;
         const sd = Math.sqrt(sx * sx + sy * sy) || 1;

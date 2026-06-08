@@ -23,7 +23,7 @@
  4th. {4위 이름}
  ...
 
- ──────────────────
+ ──────────────────────
  ▶ Play [BLITZ](https://randomgame-7pg4.vercel.app/) Now
 ```
 
@@ -43,7 +43,7 @@
  5th. 최예은
  6th. 정하늘
 
- ──────────────────
+ ──────────────────────
  ▶ Play [BLITZ](https://randomgame-7pg4.vercel.app/) Now
 ```
 

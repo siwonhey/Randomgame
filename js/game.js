@@ -216,6 +216,9 @@ function endBattle(winner) {
 function showResult() {
   const winner = state.rankings[0];
   resultOverlay.classList.add('show');
+  // Event title above the winner spinner — mirrors the in-game title HUD.
+  document.getElementById('result-event-title').textContent =
+    document.getElementById('event-title').value || 'BLITZ BATTLE';
   document.getElementById('result-winner-name').textContent = winner.name;
   showWinner(winner);
 

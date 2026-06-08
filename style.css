@@ -924,12 +924,11 @@ body.shuffle-hint-active #shuffle-hint {
      "N REMAINING" / timer below — plus a max-width that keeps it clear of the
      logo (the binding side): logo right edge (36 + 32×98/38 ≈ 118px) + 24px
      breathing, reserved each side ⇒ 100vw − 284px; it clips with … past that.
-     Vertically it's centered (translateY −50%) on the logo's mid-line (top = its
-     center, 28 + 16 = 44px) rather than top-aligned, so it stays balanced as the
-     font scales down on smaller screens instead of hugging the top edge. */
-  top: 44px;
+     Vertically it's TOP-aligned with the logo and the top-right mute button (all
+     three share top: 28px) so the title sits in the same row as the chrome. */
+  top: 28px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 0);
   max-width: calc(100vw - 284px);
   text-align: center;
   font-family: var(--f-body);
@@ -1092,6 +1091,26 @@ body.popup-open #title-hud { opacity: 0; }
   gap: 0;
   position: relative;   /* anchor for the custom scroll indicator */
 }
+
+/* Event title above the winner spinner — identifies which battle this result
+   is for. Margin-bottom holds the gap to the top/spinner image below. */
+#result-event-title {
+  font-family: var(--f-body);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.70);
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 20px;
+  max-width: min(90vw, 640px);
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+  animation: fadeIn 0.5s ease;
+}
+#result-event-title:empty { display: none; }
 
 #result-3d {
   width: 280px;
@@ -1578,13 +1597,14 @@ body[data-phase="result"] .brand-block {
 
   /* HUD adjustments */
   #countdown { font-size: 84px; }
-  /* Same centering model as desktop (inherited left:50% + translate −50%,−50%),
-     only the numbers change for mobile: the vertical center is the logo's mid-
-     line (brand top 22 + 32/2 = 38px), and the reserved side margin tracks the
-     smaller logo inset (right edge 22 + 82 = 104px + 14px ⇒ 236px total). The
-     15-char cap + … keep it off the logo and the 44px mute button. */
+  /* Same horizontal-centering model as desktop (left:50% + translateX −50%);
+     mobile just top-aligns the title with the logo / mute row (top: 22px) and
+     uses smaller type. The 10-char cap + … keep it off the logo and mute button. */
   #title-hud {
-    top: 38px;
+    /* Top-aligned with the logo and mute button (both top: 22px on mobile) so
+       all three sit in the same top row. */
+    top: 22px;
+    transform: translate(-50%, 0);
     /* Title is capped at 10 chars in the input, so reserve only enough side room
        to clear the top-left logo / top-right gear (~66px) and let the full 10
        chars show without an ellipsis on 360px+ phones. */
@@ -1630,6 +1650,7 @@ body[data-phase="result"] .brand-block {
     width: 100%;
     max-height: 100%;     /* fit the overlay's content box; list scrolls inside */
   }
+  #result-event-title { font-size: 13px; letter-spacing: 1.5px; margin-bottom: 8px; }
   #result-3d { width: 200px; height: 200px; flex-shrink: 0; }
   .result-winner-block { margin-top: -6px; flex-shrink: 0; }
   #result-title { font-size: 11px; letter-spacing: 2.5px; }
@@ -1688,7 +1709,19 @@ body[data-phase="result"] .brand-block {
      narrow viewport the flex row squeezes the names (min-width:0 + overflow:hidden)
      down to ZERO width — the names vanished entirely on mobile. Pinning the name
      and its column keeps them at content width so they always render. */
-  #result-list .result-name { max-width: 7em; flex-shrink: 0; }
+  #result-list .result-name {
+    max-width: 7em;
+    flex-shrink: 0;
+    /* Don't truncate ranked names on mobile — wrap to a second line instead of
+       cutting with an ellipsis (keep-all keeps Korean 어절 intact; anywhere is a
+       fallback for a single very long token). The rank tag aligns to the first
+       line via the row's baseline alignment. */
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    overflow: visible;
+    text-overflow: clip;
+  }
   #result-list .result-column { flex-shrink: 0; }
   .roster-card .participant .name { max-width: 7em; }
   .roster-corner .participant .name { max-width: 7em; }
