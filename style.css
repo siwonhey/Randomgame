@@ -1683,7 +1683,13 @@ body[data-phase="result"] .brand-block {
      to a single glyph / blank — ≤ ~6-char names always show in full. */
   #result-list {
     margin-top: 24px;     /* clearer separation between the hero and rankings */
-    padding: 2px 0;
+    /* Horizontal padding reserves a gutter for the custom scroll thumb, which is
+       drawn at the list's right edge (scrRect.width − 7). With width:max-content
+       the list hugs the names, so without this gutter the thumb sat right on top
+       of the rightmost column and names read as running past/under the slider.
+       Symmetric so the centered list stays centered; the thumb lands in the right
+       gutter, clear of the names. */
+    padding: 2px 14px;
     /* Two vertical columns side by side (2열). Names are split across them in
        JS (ceil(N/2) per column). */
     flex-direction: row;
