@@ -18,6 +18,7 @@ export function pauseBattle() {
   if (state.phase !== 'battle' || state.paused) return;
   pausePhysics();
   setEDMVolume(BGM_VOLUME.pause, 0.25);
+  document.body.classList.add('is-paused');
   if (pauseIndicator) pauseIndicator.classList.add('show');
 }
 
@@ -26,6 +27,7 @@ export function resumeBattle() {
   resumePhysics();
   // Restore via mode helper so we pick up whatever battle volume audio.js sets.
   setEDMMode('battle');
+  document.body.classList.remove('is-paused');
   if (pauseIndicator) pauseIndicator.classList.remove('show');
 }
 
@@ -284,6 +286,7 @@ export function resetGame() {
   state.rankings = [];
   state.battleElapsed = 0;
   state.paused = false;
+  document.body.classList.remove('is-paused');
   if (pauseIndicator) pauseIndicator.classList.remove('show');
   stopSpinHum();
   // Keep BGM playing across reset; just bring it back up to the idle level.

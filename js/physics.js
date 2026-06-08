@@ -281,9 +281,13 @@ export function physicsTick() {
       }
     }
 
-    // Floor the spin so it never decays to ~0 (which made tops look dead / "힘이
-    //빠진" late game). 500 keeps a steady visible spin without the too-fast look.
-    top.rpm = Math.max(top.rpm * top.angularDecay, 500);
+    // Hold the spin STEADY across the whole battle (사용자 요청: 시작이 과하지 않게,
+    // 진행할수록 더뎌지지 않게). Old code decayed rpm 1250→500 so the spin visibly
+    // slowed; now each top eases toward a time-based target that holds and even
+    // ramps slightly UP late (660 → 900 by 25s), so the finish feels keener, never
+    // draggier. Launch rpm starts right at the target so there's no early overshoot.
+    const spinTarget = 660 + Math.min(state.battleElapsed / 25, 1) * 240;
+    top.rpm += (spinTarget - top.rpm) * 0.02;
     avgSpeed += Math.sqrt(top.body.velocity.x ** 2 + top.body.velocity.y ** 2);
 
     if (state.battleElapsed > 1.5 && active.length > 1 && dist > STADIUM_RADIUS) {

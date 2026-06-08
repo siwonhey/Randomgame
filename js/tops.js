@@ -475,9 +475,11 @@ export function addTopPhysics(name, color) {
   const top = {
     body, mesh, label, name, color,
     eliminated: false,
-    angularDecay: cryptoRange(0.997, 0.999),
     rpm: 0,
-    initialSpin: cryptoRange(1000, 1500),
+    // Launch spin sits right at the steady run-speed (physics.js eases rpm toward a
+    // time-based target), so the spin no longer starts fast and visibly decays —
+    // 속도감이 게임 내내 일정. Small per-top variance keeps the field from looking synced.
+    initialSpin: cryptoRange(640, 720),
     radius,
     // Slight per-top strength (±8%). Scales the charge dash + bounce in physics.js
     // so no two tops behave identically — breaks the symmetric standoffs where two

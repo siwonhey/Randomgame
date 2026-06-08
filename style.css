@@ -1006,6 +1006,21 @@ body.popup-open #title-hud { opacity: 0; }
 /* Pause indicator — centered overlay during in-battle pause. Pure visual;
    pause toggling lives on the renderer canvas, so the indicator stays
    pointer-events: none. */
+/* Light background dim while paused (중지 시 배경 옅은 dim). Sits above the 3D
+   playfield (canvas z:0) but below the HUD title (z:5) and the pause indicator
+   (z:6), so the playfield darkens while PAUSED reads crisply on top. */
+#game-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 2;
+}
+body.is-paused #game-area::before { opacity: 1; }
+
 #pause-indicator {
   position: absolute;
   top: 50%; left: 50%;
@@ -1451,6 +1466,8 @@ body[data-phase="result"] .brand-block {
     top: 22px;
     left: 22px;
   }
+  /* Slightly smaller logo on mobile (살짝 줄임), kept anchored to the top-left. */
+  .brand-icon { height: 26px; }
 
   /* While the setup card scrolls, its participant text passes behind the fixed
      top-left logo and the two overlap confusingly. A fixed dark gradient strip
@@ -1604,10 +1621,11 @@ body[data-phase="result"] .brand-block {
      mobile just top-aligns the title with the logo / mute row (top: 22px) and
      uses smaller type. The 10-char cap + … keep it off the logo and mute button. */
   #title-hud {
-    /* Top-aligned with the logo and mute button (both top: 22px on mobile) so
-       all three sit in the same top row. */
-    top: 22px;
-    transform: translate(-50%, 0);
+    /* Vertically centered on the middle height of the logo (top 22 + 26/2 = 35)
+       and the mute button (top 22 + 44/2 = 44) — midpoint ≈ 40px — so the title
+       reads as level with the chrome icons rather than top-aligned above them. */
+    top: 40px;
+    transform: translate(-50%, -50%);
     /* Title is capped at 10 chars in the input, so reserve only enough side room
        to clear the top-left logo / top-right gear (~66px) and let the full 10
        chars show without an ellipsis on 360px+ phones. */
@@ -1681,6 +1699,10 @@ body[data-phase="result"] .brand-block {
     min-width: 0;         /* override the desktop min-width so the list hugs its rows */
     flex: 0 1 auto;       /* shrinks to fit so the actions row stays visible */
     min-height: 0;
+    /* Hard cap on the list height so a long roster scrolls internally sooner
+       instead of growing the centered result block and pushing the game title
+       up off the top (참가자 많을 때 타이틀이 과하게 상단으로 올라가는 현상 방지). */
+    max-height: 34vh;
     /* Scrolls only once the two columns fill past this shrunk height — i.e.
        when 2열이 아래까지 채워진 경우에만. Custom indicator drawn instead of
        the native bar. */
@@ -1713,17 +1735,16 @@ body[data-phase="result"] .brand-block {
      down to ZERO width — the names vanished entirely on mobile. Pinning the name
      and its column keeps them at content width so they always render. */
   #result-list .result-name {
+    /* Long names overran the column and collided with the custom scroll slider,
+       so cap the name at ~7 chars and ellipsis ONLY the overflow — names within
+       7em still show in full; only longer ones get the … (이름이 긴 경우만 생략).
+       flex-shrink:0 is CRITICAL: without it the flex row squeezes the name to
+       zero width on narrow viewports and the name vanishes. */
     max-width: 7em;
     flex-shrink: 0;
-    /* Don't truncate ranked names on mobile — wrap to a second line instead of
-       cutting with an ellipsis (keep-all keeps Korean 어절 intact; anywhere is a
-       fallback for a single very long token). The rank tag aligns to the first
-       line via the row's baseline alignment. */
-    white-space: normal;
-    word-break: keep-all;
-    overflow-wrap: anywhere;
-    overflow: visible;
-    text-overflow: clip;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   #result-list .result-column { flex-shrink: 0; }
   .roster-card .participant .name { max-width: 7em; }
